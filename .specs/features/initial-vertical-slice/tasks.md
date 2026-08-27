@@ -142,11 +142,11 @@ T6 → T7
 
 **Done when**:
 
-- [ ] `save` stores a new record when `eventId` is unseen.
-- [ ] `save` returns the existing record when `eventId` already exists.
-- [ ] `findByEventId` returns the stored record or `undefined`.
-- [ ] Quick gate passes: `npm test`.
-- [ ] Test count: repository tests pass.
+- [x] `save` stores a new record when `eventId` is unseen.
+- [x] `save` returns the existing record when `eventId` already exists.
+- [x] `findByEventId` returns the stored record or `undefined`.
+- [x] Quick gate passes: `npm test`.
+- [x] Test count: repository tests pass.
 
 **Tests**: unit
 **Gate**: quick

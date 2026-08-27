@@ -195,12 +195,12 @@ T6 → T7
 
 **Done when**:
 
-- [ ] Consumer accepts a terminal event and invokes `NotificationDeliveryService.recordDelivery`.
-- [ ] Consumer acknowledges after a successful record.
-- [ ] Consumer rejects/nacks non-terminal events without creating a record.
-- [ ] Duplicate events are acknowledged without a second record.
-- [ ] Quick gate passes: `npm test`.
-- [ ] Test count: consumer tests pass covering valid, duplicate, and invalid events.
+- [x] Consumer accepts a terminal event and invokes `NotificationDeliveryService.recordDelivery`.
+- [x] Consumer acknowledges after a successful record.
+- [x] Consumer rejects/nacks non-terminal events without creating a record.
+- [x] Duplicate events are acknowledged without a second record.
+- [x] Quick gate passes: `npm test`.
+- [x] Test count: consumer tests pass covering valid, duplicate, and invalid events.
 
 **Tests**: unit
 **Gate**: quick

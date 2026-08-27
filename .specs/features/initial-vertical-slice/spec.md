@@ -51,10 +51,10 @@ The Notification Service must prove the final consumer boundary without integrat
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| NOT-01 | P1: Record terminal notification | Tasks | Complete |
-| NOT-02 | P1: Record terminal notification | Tasks | Complete |
-| NOT-03 | P1: Record terminal notification | Tasks | Complete |
-| NOT-04 | P1: Record terminal notification | Tasks | Complete |
+| NOT-01 | P1: Record terminal notification | Tasks | ✅ Verified |
+| NOT-02 | P1: Record terminal notification | Tasks | ✅ Verified |
+| NOT-03 | P1: Record terminal notification | Tasks | ✅ Verified |
+| NOT-04 | P1: Record terminal notification | Tasks | ✅ Verified |
 
 **Coverage:** 4 total, 4 mapped to future tasks, 0 unmapped.
 

@@ -96,8 +96,8 @@ T6 → T7
 
 **Done when**:
 
-- [ ] `DeliveryRecord` contains `eventId`, `processingRequestId`, `ownerUserId`, `status`, and `recordedAt`.
-- [ ] Build gate passes: `npm run build`.
+- [x] `DeliveryRecord` contains `eventId`, `processingRequestId`, `ownerUserId`, `status`, and `recordedAt`.
+- [x] Build gate passes: `npm run build`.
 
 **Tests**: build gate only
 **Gate**: build

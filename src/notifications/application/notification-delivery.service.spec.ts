@@ -6,13 +6,13 @@ import { NotificationDeliveryService } from './notification-delivery.service';
 class StubDeliveryRepository implements DeliveryRepository {
   private readonly records = new Map<string, DeliveryRecord>();
 
-  async findByEventId(eventId: string): Promise<DeliveryRecord | undefined> {
-    return this.records.get(eventId);
+  findByEventId(eventId: string): Promise<DeliveryRecord | undefined> {
+    return Promise.resolve(this.records.get(eventId));
   }
 
-  async save(record: DeliveryRecord): Promise<DeliveryRecord> {
+  save(record: DeliveryRecord): Promise<DeliveryRecord> {
     this.records.set(record.eventId, record);
-    return record;
+    return Promise.resolve(record);
   }
 }
 

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DeliveryRecord } from '../domain/delivery-record';
-import { DeliveryRepository } from '../domain/delivery.repository';
+import type { DeliveryRepository } from '../domain/delivery.repository';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
 
 @Injectable()
@@ -9,7 +9,7 @@ export class NotificationDeliveryService {
 
   async recordDelivery(event: TerminalEventDto): Promise<DeliveryRecord> {
     if (event.status !== 'COMPLETED' && event.status !== 'FAILED') {
-      throw new Error(`Invalid terminal status: ${event.status}`);
+      throw new Error(`Invalid terminal status: ${String(event.status)}`);
     }
 
     const existing = await this.deliveryRepository.findByEventId(event.eventId);

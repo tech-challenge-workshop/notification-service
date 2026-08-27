@@ -3,6 +3,11 @@ import { Ctx, EventPattern, RmqContext } from '@nestjs/microservices';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
 import { TerminalEventDto } from '../../dtos/terminal-event.dto';
 
+interface RabbitChannel {
+  ack(message: unknown): void;
+  nack(message: unknown, allUpTo?: boolean, requeue?: boolean): void;
+}
+
 @Controller()
 export class TerminalEventConsumer {
   private readonly logger = new Logger(TerminalEventConsumer.name);
@@ -16,7 +21,7 @@ export class TerminalEventConsumer {
     event: TerminalEventDto,
     @Ctx() context: RmqContext,
   ): Promise<void> {
-    const channel = context.getChannelRef();
+    const channel = context.getChannelRef() as RabbitChannel;
     const message = context.getMessage();
 
     try {

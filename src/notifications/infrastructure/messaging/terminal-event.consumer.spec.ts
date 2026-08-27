@@ -5,15 +5,17 @@ import { TerminalEventConsumer } from './terminal-event.consumer';
 
 describe('TerminalEventConsumer', () => {
   let consumer: TerminalEventConsumer;
-  let deliveryService: jest.Mocked<NotificationDeliveryService>;
+  let recordDeliveryMock: jest.Mock;
+  let deliveryService: NotificationDeliveryService;
   let channel: { ack: jest.Mock; nack: jest.Mock };
   let message: Record<string, unknown>;
   let context: RmqContext;
 
   beforeEach(() => {
+    recordDeliveryMock = jest.fn();
     deliveryService = {
-      recordDelivery: jest.fn(),
-    } as unknown as jest.Mocked<NotificationDeliveryService>;
+      recordDelivery: recordDeliveryMock,
+    } as unknown as NotificationDeliveryService;
 
     channel = {
       ack: jest.fn(),
@@ -42,13 +44,11 @@ describe('TerminalEventConsumer', () => {
   describe('handleTerminalEvent', () => {
     it('should record a valid terminal event and acknowledge the message', async () => {
       const event = validCompletedEvent();
-      deliveryService.recordDelivery.mockResolvedValue({} as ReturnType<
-        NotificationDeliveryService['recordDelivery']
-      >);
+      recordDeliveryMock.mockResolvedValue({});
 
       await consumer.handleTerminalEvent(event, context);
 
-      expect(deliveryService.recordDelivery).toHaveBeenCalledWith(event);
+      expect(recordDeliveryMock).toHaveBeenCalledWith(event);
       expect(channel.ack).toHaveBeenCalledWith(message);
       expect(channel.nack).not.toHaveBeenCalled();
     });
@@ -62,11 +62,11 @@ describe('TerminalEventConsumer', () => {
         status: 'COMPLETED',
         recordedAt: new Date(),
       };
-      deliveryService.recordDelivery.mockResolvedValue(existingRecord);
+      recordDeliveryMock.mockResolvedValue(existingRecord);
 
       await consumer.handleTerminalEvent(event, context);
 
-      expect(deliveryService.recordDelivery).toHaveBeenCalledTimes(1);
+      expect(recordDeliveryMock).toHaveBeenCalledTimes(1);
       expect(channel.ack).toHaveBeenCalledWith(message);
       expect(channel.nack).not.toHaveBeenCalled();
     });
@@ -76,22 +76,20 @@ describe('TerminalEventConsumer', () => {
         ...validCompletedEvent(),
         status: 'PROCESSING' as 'COMPLETED',
       };
-      deliveryService.recordDelivery.mockRejectedValue(
+      recordDeliveryMock.mockRejectedValue(
         new Error('Invalid terminal status: PROCESSING'),
       );
 
       await consumer.handleTerminalEvent(event, context);
 
-      expect(deliveryService.recordDelivery).toHaveBeenCalledWith(event);
+      expect(recordDeliveryMock).toHaveBeenCalledWith(event);
       expect(channel.ack).not.toHaveBeenCalled();
       expect(channel.nack).toHaveBeenCalledWith(message, false, false);
     });
 
     it('should nack with requeue when recording fails for technical redelivery', async () => {
       const event = validCompletedEvent();
-      deliveryService.recordDelivery.mockRejectedValue(
-        new Error('Database unavailable'),
-      );
+      recordDeliveryMock.mockRejectedValue(new Error('Database unavailable'));
 
       await consumer.handleTerminalEvent(event, context);
 

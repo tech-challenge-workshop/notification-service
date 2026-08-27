@@ -5,7 +5,7 @@
 Implement these tasks with the `tlc-spec-driven` skill and its Execute flow. Each task ends with an atomic Conventional Commit. No code changes are made in this planning step.
 
 **Design**: `.specs/features/initial-vertical-slice/design.md`
-**Status**: Draft
+**Status**: Complete
 
 ---
 
@@ -222,10 +222,10 @@ T6 → T7
 
 **Done when**:
 
-- [ ] `npm test` passes with all unit tests.
-- [ ] `npm run lint` passes with no errors.
-- [ ] `npm run build` compiles successfully.
-- [ ] `git status` shows only the intended files.
+- [x] `npm test` passes with all unit tests.
+- [x] `npm run lint` passes with no errors.
+- [x] `npm run build` compiles successfully.
+- [x] `git status` shows only the intended files.
 
 **Tests**: build gate
 **Gate**: build

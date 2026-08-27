@@ -119,8 +119,8 @@ T6 → T7
 
 **Done when**:
 
-- [ ] `DeliveryRepository` interface declares `findByEventId(eventId: string): Promise<DeliveryRecord | undefined>` and `save(record: DeliveryRecord): Promise<DeliveryRecord>`.
-- [ ] Build gate passes: `npm run build`.
+- [x] `DeliveryRepository` interface declares `findByEventId(eventId: string): Promise<DeliveryRecord | undefined>` and `save(record: DeliveryRecord): Promise<DeliveryRecord>`.
+- [x] Build gate passes: `npm run build`.
 
 **Tests**: build gate only
 **Gate**: build

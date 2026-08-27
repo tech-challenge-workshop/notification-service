@@ -72,9 +72,9 @@ T6 → T7
 
 **Done when**:
 
-- [ ] DTO contains `eventId`, `processingRequestId`, `ownerUserId`, `status`, `zipStorageKey?`, `failureReason?`, and `occurredAt`.
-- [ ] `status` is constrained to `COMPLETED` or `FAILED`.
-- [ ] Build gate passes: `npm run build`.
+- [x] DTO contains `eventId`, `processingRequestId`, `ownerUserId`, `status`, `zipStorageKey?`, `failureReason?`, and `occurredAt`.
+- [x] `status` is constrained to `COMPLETED` or `FAILED`.
+- [x] Build gate passes: `npm run build`.
 
 **Tests**: build gate only
 **Gate**: build

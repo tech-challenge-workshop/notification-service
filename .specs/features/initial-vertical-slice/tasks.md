@@ -168,12 +168,12 @@ T6 → T7
 
 **Done when**:
 
-- [ ] `recordDelivery` creates a `DeliveryRecord` for a valid `COMPLETED` or `FAILED` event.
-- [ ] `recordDelivery` returns the existing record for a duplicate `eventId`.
-- [ ] `recordDelivery` throws a domain error for a non-terminal status.
-- [ ] It does not call SES or modify Processing Request state.
-- [ ] Quick gate passes: `npm test`.
-- [ ] Test count: service tests pass covering valid, duplicate, and invalid events.
+- [x] `recordDelivery` creates a `DeliveryRecord` for a valid `COMPLETED` or `FAILED` event.
+- [x] `recordDelivery` returns the existing record for a duplicate `eventId`.
+- [x] `recordDelivery` throws a domain error for a non-terminal status.
+- [x] It does not call SES or modify Processing Request state.
+- [x] Quick gate passes: `npm test`.
+- [x] Test count: service tests pass covering valid, duplicate, and invalid events.
 
 **Tests**: unit
 **Gate**: quick

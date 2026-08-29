@@ -93,10 +93,10 @@ describe('NotificationDeliveryService', () => {
         processingRequestId: '',
       };
 
-      await expect(service.recordDelivery(event as TerminalEventDto)).rejects.toThrow(
+      await expect(service.recordDelivery(event)).rejects.toThrow(
         InvalidTerminalEventError,
       );
-      await expect(service.recordDelivery(event as TerminalEventDto)).rejects.toMatchObject({
+      await expect(service.recordDelivery(event)).rejects.toMatchObject({
         code: 'MISSING_PROCESSING_REQUEST_ID',
       });
     });

@@ -239,12 +239,12 @@ T7
 
 **Done when**:
 
-- [ ] `Dockerfile` uses a multistage build based on `node:22-alpine`.
-- [ ] Build stage installs dependencies with `npm ci`, copies source, and runs `npm run build`.
-- [ ] Runtime stage exposes port `3003` and starts with `npm run start:prod`.
-- [ ] `HEALTHCHECK` instruction curls `GET /health` and expects a successful HTTP response.
-- [ ] `.dockerignore` excludes `node_modules`, `dist`, `coverage`, `.env*`, `.git`, and `._*`.
-- [ ] `docker build -t notification-service:local .` succeeds.
+- [x] `Dockerfile` uses a multistage build based on `node:22-alpine`.
+- [x] Build stage installs dependencies with `npm ci`, copies source, and runs `npm run build`.
+- [x] Runtime stage exposes port `3003` and starts with `npm run start:prod`.
+- [x] `HEALTHCHECK` instruction curls `GET /health` and expects a successful HTTP response.
+- [x] `.dockerignore` excludes `node_modules`, `dist`, `coverage`, `.env*`, `.git`, and `._*`.
+- [x] `docker build -t notification-service:local .` succeeds.
 
 **Tests**: manual Docker gate
 **Gate**: docker

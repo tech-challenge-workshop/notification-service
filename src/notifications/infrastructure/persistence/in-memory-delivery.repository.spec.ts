@@ -17,7 +17,8 @@ describe('InMemoryDeliveryRepository', () => {
 
   describe('findByProcessingRequestId', () => {
     it('should return undefined when no delivery matches the request id', async () => {
-      const result = await repository.findByProcessingRequestId('unknown-request');
+      const result =
+        await repository.findByProcessingRequestId('unknown-request');
       expect(result).toBeUndefined();
     });
 

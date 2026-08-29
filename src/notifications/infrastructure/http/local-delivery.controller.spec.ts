@@ -1,7 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { DeliveryRecord } from '../../domain/delivery-record';
-import { DeliveryRepository } from '../../domain/delivery.repository';
 import { DELIVERY_REPOSITORY } from '../../domain/delivery-repository.token';
 import { LocalDeliveryController } from './local-delivery.controller';
 
@@ -43,8 +42,8 @@ describe('LocalDeliveryController', () => {
   it('should throw NotFoundException when the processing request id is not found', async () => {
     repository.findByProcessingRequestId.mockResolvedValue(undefined);
 
-    await expect(controller.findByProcessingRequestId('missing')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      controller.findByProcessingRequestId('missing'),
+    ).rejects.toThrow(NotFoundException);
   });
 });

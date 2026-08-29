@@ -9,7 +9,8 @@ import { TerminalEventDto } from '../dtos/terminal-event.dto';
 @Injectable()
 export class NotificationDeliveryService {
   constructor(
-    @Inject(DELIVERY_REPOSITORY) private readonly deliveryRepository: DeliveryRepository,
+    @Inject(DELIVERY_REPOSITORY)
+    private readonly deliveryRepository: DeliveryRepository,
   ) {}
 
   async recordDelivery(event: TerminalEventDto): Promise<DeliveryRecord> {
@@ -28,7 +29,9 @@ export class NotificationDeliveryService {
     }
 
     try {
-      const existing = await this.deliveryRepository.findByEventId(event.eventId);
+      const existing = await this.deliveryRepository.findByEventId(
+        event.eventId,
+      );
       if (existing) {
         return existing;
       }

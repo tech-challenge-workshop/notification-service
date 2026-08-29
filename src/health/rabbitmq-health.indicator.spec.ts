@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { Test, TestingModule } from '@nestjs/testing';
+import * as amqpConnectionManager from 'amqp-connection-manager';
 import { RabbitMqHealthIndicator } from './rabbitmq-health.indicator';
 
 jest.mock('amqp-connection-manager', () => {
@@ -8,7 +9,7 @@ jest.mock('amqp-connection-manager', () => {
   };
 });
 
-const { connect } = jest.requireMock('amqp-connection-manager') as {
+const mockedAmqp = amqpConnectionManager as unknown as {
   connect: jest.Mock;
 };
 
@@ -16,9 +17,13 @@ describe('RabbitMqHealthIndicator', () => {
   let indicator: RabbitMqHealthIndicator;
   let mockConnection: EventEmitter & { close: jest.Mock };
 
+  function createMockConnection(): EventEmitter & { close: jest.Mock } {
+    return Object.assign(new EventEmitter(), { close: jest.fn() });
+  }
+
   beforeEach(async () => {
-    mockConnection = Object.assign(new EventEmitter(), { close: jest.fn() });
-    connect.mockReturnValue(mockConnection);
+    mockConnection = createMockConnection();
+    mockedAmqp.connect.mockReturnValue(mockConnection);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [RabbitMqHealthIndicator],

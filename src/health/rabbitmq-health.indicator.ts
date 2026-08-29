@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { connect, AmqpConnectionManager } from 'amqp-connection-manager';
 
 @Injectable()
@@ -31,7 +36,7 @@ export class RabbitMqHealthIndicator implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    this.connection?.close();
+    void this.connection?.close();
   }
 
   isReady(): boolean {

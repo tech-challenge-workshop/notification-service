@@ -120,12 +120,12 @@ T7
 
 **Done when**:
 
-- [ ] `recordDelivery` throws `InvalidTerminalEventError` for a non-terminal status or missing `processingRequestId`.
-- [ ] `recordDelivery` throws `DeliveryPersistenceError` when the repository rejects unexpectedly.
-- [ ] Valid `COMPLETED` and `FAILED` events still create one record.
-- [ ] Duplicate `eventId` returns the existing record without creating a second one.
-- [ ] Service unit tests cover valid, duplicate, invalid-domain, and technical-failure branches.
-- [ ] Quick gate passes: `npm test`.
+- [x] `recordDelivery` throws `InvalidTerminalEventError` for a non-terminal status or missing `processingRequestId`.
+- [x] `recordDelivery` throws `DeliveryPersistenceError` when the repository rejects unexpectedly.
+- [x] Valid `COMPLETED` and `FAILED` events still create one record.
+- [x] Duplicate `eventId` returns the existing record without creating a second one.
+- [x] Service unit tests cover valid, duplicate, invalid-domain, and technical-failure branches.
+- [x] Quick gate passes: `npm test`.
 
 **Tests**: unit
 **Gate**: quick

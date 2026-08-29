@@ -1,16 +1,22 @@
 import { DeliveryRecord } from '../domain/delivery-record';
 import { DeliveryRepository } from '../domain/delivery.repository';
+import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
+import { InvalidTerminalEventError } from '../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
 import { NotificationDeliveryService } from './notification-delivery.service';
 
 class StubDeliveryRepository implements DeliveryRepository {
   private readonly records = new Map<string, DeliveryRecord>();
+  saveFailure?: Error;
 
   findByEventId(eventId: string): Promise<DeliveryRecord | undefined> {
     return Promise.resolve(this.records.get(eventId));
   }
 
   save(record: DeliveryRecord): Promise<DeliveryRecord> {
+    if (this.saveFailure) {
+      return Promise.reject(this.saveFailure);
+    }
     this.records.set(record.eventId, record);
     return Promise.resolve(record);
   }
@@ -67,14 +73,40 @@ describe('NotificationDeliveryService', () => {
       expect(second.recordedAt).toBe(first.recordedAt);
     });
 
-    it('should throw for a non-terminal status', async () => {
+    it('should throw InvalidTerminalEventError for a non-terminal status', async () => {
       const event: TerminalEventDto = {
         ...validCompletedEvent(),
         status: 'PROCESSING' as 'COMPLETED',
       };
 
       await expect(service.recordDelivery(event)).rejects.toThrow(
-        'Invalid terminal status: PROCESSING',
+        InvalidTerminalEventError,
+      );
+      await expect(service.recordDelivery(event)).rejects.toMatchObject({
+        code: 'INVALID_TERMINAL_STATUS',
+      });
+    });
+
+    it('should throw InvalidTerminalEventError when processingRequestId is missing', async () => {
+      const event = {
+        ...validCompletedEvent(),
+        processingRequestId: '',
+      };
+
+      await expect(service.recordDelivery(event as TerminalEventDto)).rejects.toThrow(
+        InvalidTerminalEventError,
+      );
+      await expect(service.recordDelivery(event as TerminalEventDto)).rejects.toMatchObject({
+        code: 'MISSING_PROCESSING_REQUEST_ID',
+      });
+    });
+
+    it('should throw DeliveryPersistenceError when the repository rejects unexpectedly', async () => {
+      repository.saveFailure = new Error('Database unavailable');
+      const event = validCompletedEvent();
+
+      await expect(service.recordDelivery(event)).rejects.toThrow(
+        DeliveryPersistenceError,
       );
     });
   });

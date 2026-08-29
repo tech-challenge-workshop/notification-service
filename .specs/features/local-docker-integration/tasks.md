@@ -179,13 +179,13 @@ T7
 
 **Done when**:
 
-- [ ] Consumer validates that `processingRequestId` is present before calling `recordDelivery`; otherwise throws `InvalidTerminalEventError`.
-- [ ] Consumer acks after successful record.
-- [ ] Consumer nacks with `requeue=false` for `InvalidTerminalEventError`.
-- [ ] Consumer nacks with `requeue=true` for `DeliveryPersistenceError` or other unexpected errors.
-- [ ] Duplicate events are acknowledged without a second record.
-- [ ] Consumer unit tests are updated to assert by error type instead of message text.
-- [ ] Quick gate passes: `npm test`.
+- [x] Consumer validates that `processingRequestId` is present before calling `recordDelivery`; otherwise throws `InvalidTerminalEventError`.
+- [x] Consumer acks after successful record.
+- [x] Consumer nacks with `requeue=false` for `InvalidTerminalEventError`.
+- [x] Consumer nacks with `requeue=true` for `DeliveryPersistenceError` or other unexpected errors.
+- [x] Duplicate events are acknowledged without a second record.
+- [x] Consumer unit tests are updated to assert by error type instead of message text.
+- [x] Quick gate passes: `npm test`.
 
 **Tests**: unit
 **Gate**: quick

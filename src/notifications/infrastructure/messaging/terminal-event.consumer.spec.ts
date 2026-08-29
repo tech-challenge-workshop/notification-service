@@ -1,5 +1,7 @@
 import { RmqContext } from '@nestjs/microservices';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
+import { DeliveryPersistenceError } from '../../domain/errors/delivery-persistence.error';
+import { InvalidTerminalEventError } from '../../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../../dtos/terminal-event.dto';
 import { TerminalEventConsumer } from './terminal-event.consumer';
 
@@ -71,13 +73,16 @@ describe('TerminalEventConsumer', () => {
       expect(channel.nack).not.toHaveBeenCalled();
     });
 
-    it('should reject and nack non-terminal events without creating a record', async () => {
+    it('should reject and nack non-terminal events without requeue', async () => {
       const event: TerminalEventDto = {
         ...validCompletedEvent(),
         status: 'PROCESSING' as 'COMPLETED',
       };
       recordDeliveryMock.mockRejectedValue(
-        new Error('Invalid terminal status: PROCESSING'),
+        new InvalidTerminalEventError(
+          'Invalid terminal status: PROCESSING',
+          'INVALID_TERMINAL_STATUS',
+        ),
       );
 
       await consumer.handleTerminalEvent(event, context);
@@ -87,9 +92,34 @@ describe('TerminalEventConsumer', () => {
       expect(channel.nack).toHaveBeenCalledWith(message, false, false);
     });
 
-    it('should nack with requeue when recording fails for technical redelivery', async () => {
+    it('should reject and nack events missing processingRequestId without requeue', async () => {
+      const event: TerminalEventDto = {
+        ...validCompletedEvent(),
+        processingRequestId: '',
+      };
+
+      await consumer.handleTerminalEvent(event, context);
+
+      expect(recordDeliveryMock).not.toHaveBeenCalled();
+      expect(channel.ack).not.toHaveBeenCalled();
+      expect(channel.nack).toHaveBeenCalledWith(message, false, false);
+    });
+
+    it('should nack with requeue for DeliveryPersistenceError', async () => {
       const event = validCompletedEvent();
-      recordDeliveryMock.mockRejectedValue(new Error('Database unavailable'));
+      recordDeliveryMock.mockRejectedValue(
+        new DeliveryPersistenceError('Database unavailable'),
+      );
+
+      await consumer.handleTerminalEvent(event, context);
+
+      expect(channel.ack).not.toHaveBeenCalled();
+      expect(channel.nack).toHaveBeenCalledWith(message, false, true);
+    });
+
+    it('should nack with requeue for unexpected errors', async () => {
+      const event = validCompletedEvent();
+      recordDeliveryMock.mockRejectedValue(new Error('Unexpected failure'));
 
       await consumer.handleTerminalEvent(event, context);
 

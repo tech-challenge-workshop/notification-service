@@ -1,6 +1,8 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, RmqContext } from '@nestjs/microservices';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
+import { DeliveryPersistenceError } from '../../domain/errors/delivery-persistence.error';
+import { InvalidTerminalEventError } from '../../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../../dtos/terminal-event.dto';
 
 interface RabbitChannel {
@@ -25,6 +27,13 @@ export class TerminalEventConsumer {
     const message = context.getMessage();
 
     try {
+      if (!event.processingRequestId) {
+        throw new InvalidTerminalEventError(
+          'Missing processingRequestId',
+          'MISSING_PROCESSING_REQUEST_ID',
+        );
+      }
+
       await this.notificationDeliveryService.recordDelivery(event);
       channel.ack(message);
     } catch (error) {
@@ -32,12 +41,10 @@ export class TerminalEventConsumer {
         `Failed to process terminal event ${event.eventId}: ${error instanceof Error ? error.message : String(error)}`,
       );
 
-      const isInvalidStatus =
-        error instanceof Error &&
-        error.message.startsWith('Invalid terminal status');
-
-      if (isInvalidStatus) {
+      if (error instanceof InvalidTerminalEventError) {
         channel.nack(message, false, false);
+      } else if (error instanceof DeliveryPersistenceError) {
+        channel.nack(message, false, true);
       } else {
         channel.nack(message, false, true);
       }

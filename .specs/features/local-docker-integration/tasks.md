@@ -1,7 +1,7 @@
 ---
 kind: ticket
 title: "Notification Service Local Docker Integration Tasks"
-status: 0
+status: 2
 ---
 
 # Notification Service Local Docker Integration Tasks
@@ -323,13 +323,13 @@ T7
 
 **Done when**:
 
-- [ ] `npm test` passes with all unit tests.
-- [ ] `npm run test:e2e` passes.
-- [ ] `npm run lint` passes with zero warnings.
-- [ ] `npm run build` compiles successfully.
-- [ ] `docker build -t notification-service:local .` succeeds.
-- [ ] Each completed task has one Conventional Commit containing its code, tests, and the updated checkbox in this `tasks.md` file.
-- [ ] `git status` shows only the intended files.
+- [x] `npm test` passes with all unit tests.
+- [x] `npm run test:e2e` passes.
+- [x] `npm run lint` passes with zero warnings.
+- [x] `npm run build` compiles successfully.
+- [x] `docker build -t notification-service:local .` succeeds.
+- [x] Each completed task has one Conventional Commit containing its code, tests, and the updated checkbox in this `tasks.md` file.
+- [x] `git status` shows only the intended files.
 
 **Tests**: build gate
 **Gate**: build + docker

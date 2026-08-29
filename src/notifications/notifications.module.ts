@@ -13,5 +13,6 @@ import { InMemoryDeliveryRepository } from './infrastructure/persistence/in-memo
       useClass: InMemoryDeliveryRepository,
     },
   ],
+  exports: [DELIVERY_REPOSITORY],
 })
 export class NotificationsModule {}

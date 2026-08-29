@@ -10,6 +10,17 @@ export class InMemoryDeliveryRepository implements DeliveryRepository {
     return Promise.resolve(this.records.get(eventId));
   }
 
+  findByProcessingRequestId(
+    processingRequestId: string,
+  ): Promise<DeliveryRecord | undefined> {
+    for (const record of this.records.values()) {
+      if (record.processingRequestId === processingRequestId) {
+        return Promise.resolve(record);
+      }
+    }
+    return Promise.resolve(undefined);
+  }
+
   save(record: DeliveryRecord): Promise<DeliveryRecord> {
     const existing = this.records.get(record.eventId);
     if (existing) {

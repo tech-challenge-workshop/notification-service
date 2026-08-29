@@ -210,12 +210,12 @@ T7
 
 **Done when**:
 
-- [ ] `LocalDeliveryController` implements `GET /local/deliveries/:processingRequestId`.
-- [ ] The route returns the matching `DeliveryRecord` with HTTP `200`.
-- [ ] The route returns HTTP `404` when no delivery exists for the request ID.
-- [ ] `LocalDeliveryModule` is registered only when `process.env.LOCAL_INTEGRATION === 'true'`.
-- [ ] Controller/module have unit tests; e2e test verifies the route under `LOCAL_INTEGRATION=true` and its absence when the flag is unset.
-- [ ] Quick and e2e gates pass.
+- [x] `LocalDeliveryController` implements `GET /local/deliveries/:processingRequestId`.
+- [x] The route returns the matching `DeliveryRecord` with HTTP `200`.
+- [x] The route returns HTTP `404` when no delivery exists for the request ID.
+- [x] `LocalDeliveryModule` is registered only when `process.env.LOCAL_INTEGRATION === 'true'`.
+- [x] Controller/module have unit tests; e2e test verifies the route under `LOCAL_INTEGRATION=true` and its absence when the flag is unset.
+- [x] Quick and e2e gates pass.
 
 **Tests**: unit + e2e
 **Gate**: quick + e2e

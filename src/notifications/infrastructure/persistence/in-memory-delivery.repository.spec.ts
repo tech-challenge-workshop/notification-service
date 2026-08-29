@@ -15,6 +15,28 @@ describe('InMemoryDeliveryRepository', () => {
     });
   });
 
+  describe('findByProcessingRequestId', () => {
+    it('should return undefined when no delivery matches the request id', async () => {
+      const result = await repository.findByProcessingRequestId('unknown-request');
+      expect(result).toBeUndefined();
+    });
+
+    it('should return the delivery record for the given processing request id', async () => {
+      const record = new DeliveryRecord();
+      record.eventId = 'evt-1';
+      record.processingRequestId = 'req-1';
+      record.ownerUserId = 'user-1';
+      record.status = 'COMPLETED';
+      record.recordedAt = new Date('2026-08-27T00:00:00Z');
+      await repository.save(record);
+
+      const found = await repository.findByProcessingRequestId('req-1');
+
+      expect(found).toBe(record);
+      expect(found?.status).toBe('COMPLETED');
+    });
+  });
+
   describe('save', () => {
     it('should store a new delivery record', async () => {
       const record = new DeliveryRecord();

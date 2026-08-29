@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { Ctx, EventPattern, RmqContext } from '@nestjs/microservices';
+import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
 import { DeliveryPersistenceError } from '../../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../../domain/errors/invalid-terminal-event.error';
@@ -20,7 +20,7 @@ export class TerminalEventConsumer {
 
   @EventPattern('terminal.event')
   async handleTerminalEvent(
-    event: TerminalEventDto,
+    @Payload() event: TerminalEventDto,
     @Ctx() context: RmqContext,
   ): Promise<void> {
     const channel = context.getChannelRef() as RabbitChannel;

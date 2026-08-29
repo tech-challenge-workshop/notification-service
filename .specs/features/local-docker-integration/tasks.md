@@ -296,12 +296,12 @@ T7
 
 **Done when**:
 
-- [ ] E2E test starts the NestJS application with `LOCAL_INTEGRATION=true` and a test RabbitMQ connection.
-- [ ] It publishes a valid `terminal.event` to the configured queue/exchange.
-- [ ] It waits for the consumer to record the delivery.
-- [ ] It asserts `GET /local/deliveries/:processingRequestId` returns the matching `DeliveryRecord` with status `COMPLETED`.
-- [ ] It publishes the same event again and asserts the local route still returns exactly one record.
-- [ ] Quick and e2e gates pass.
+- [x] E2E test starts the NestJS application with `LOCAL_INTEGRATION=true` and a test RabbitMQ connection.
+- [x] It publishes a valid `terminal.event` to the configured queue/exchange.
+- [x] It waits for the consumer to record the delivery.
+- [x] It asserts `GET /local/deliveries/:processingRequestId` returns the matching `DeliveryRecord` with status `COMPLETED`.
+- [x] It publishes the same event again and asserts the local route still returns exactly one record.
+- [x] Quick and e2e gates pass.
 
 **Tests**: e2e
 **Gate**: e2e + build

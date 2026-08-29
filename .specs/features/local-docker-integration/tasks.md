@@ -95,10 +95,10 @@ T7
 
 **Done when**:
 
-- [ ] `InvalidTerminalEventError` carries a `code` such as `INVALID_TERMINAL_STATUS` or `MISSING_PROCESSING_REQUEST_ID`.
-- [ ] `DeliveryPersistenceError` carries `cause?: Error`.
-- [ ] Unit tests for both error classes pass.
-- [ ] Quick gate passes: `npm test`.
+- [x] `InvalidTerminalEventError` carries a `code` such as `INVALID_TERMINAL_STATUS` or `MISSING_PROCESSING_REQUEST_ID`.
+- [x] `DeliveryPersistenceError` carries `cause?: Error`.
+- [x] Unit tests for both error classes pass.
+- [x] Quick gate passes: `npm test`.
 
 **Tests**: unit
 **Gate**: quick

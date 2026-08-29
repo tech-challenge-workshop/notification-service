@@ -57,8 +57,8 @@ Notification currently records terminal events through an in-process consumer. I
 | --- | --- | --- | --- |
 | NOT-01 | P1 | Design | Pending |
 | NOT-02 | P1 | Design | Pending |
-| NOT-03 | P1 | Design | Pending |
-| NOT-04 | P1 | Design | Pending |
+| NOT-03 | P1 | Design | Implementing |
+| NOT-04 | P1 | Design | Implementing |
 | NOT-05 | P1 | Design | Pending |
 | NOT-06 | P2 | Design | Done |
 | NOT-07 | P2 | Design | Pending |

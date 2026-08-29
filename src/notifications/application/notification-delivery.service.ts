@@ -1,13 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { DeliveryRecord } from '../domain/delivery-record';
 import type { DeliveryRepository } from '../domain/delivery.repository';
+import { DELIVERY_REPOSITORY } from '../domain/delivery-repository.token';
 import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
 
 @Injectable()
 export class NotificationDeliveryService {
-  constructor(private readonly deliveryRepository: DeliveryRepository) {}
+  constructor(
+    @Inject(DELIVERY_REPOSITORY) private readonly deliveryRepository: DeliveryRepository,
+  ) {}
 
   async recordDelivery(event: TerminalEventDto): Promise<DeliveryRecord> {
     if (!event.processingRequestId) {

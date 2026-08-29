@@ -152,12 +152,12 @@ T7
 
 **Done when**:
 
-- [ ] `main.ts` starts both HTTP (port `PORT ?? 3003`) and RMQ microservice using environment variables `RABBITMQ_URL`, `RABBITMQ_QUEUE`, `RABBITMQ_EXCHANGE`, and `RABBITMQ_ROUTING_KEY`.
-- [ ] RMQ consumer uses `noAck: false` and manual acknowledgement.
-- [ ] `HealthController` exposes `GET /health` returning `{ status: 'ok', ready: boolean }`.
-- [ ] Readiness is `true` only when the RMQ connection is up; otherwise `false`.
-- [ ] Health controller and indicator have unit tests.
-- [ ] Quick gate passes: `npm test`.
+- [x] `main.ts` starts both HTTP (port `PORT ?? 3003`) and RMQ microservice using environment variables `RABBITMQ_URL`, `RABBITMQ_QUEUE`, `RABBITMQ_EXCHANGE`, and `RABBITMQ_ROUTING_KEY`.
+- [x] RMQ consumer uses `noAck: false` and manual acknowledgement.
+- [x] `HealthController` exposes `GET /health` returning `{ status: 'ok', ready: boolean }`.
+- [x] Readiness is `true` only when the RMQ connection is up; otherwise `false`.
+- [x] Health controller and indicator have unit tests.
+- [x] Quick gate passes: `npm test`.
 
 **Tests**: unit
 **Gate**: quick

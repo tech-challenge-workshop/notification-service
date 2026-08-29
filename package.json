@@ -24,6 +24,8 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/microservices": "^11.2.3",
     "@nestjs/platform-express": "^11.0.1",
+    "amqp-connection-manager": "^5.0.0",
+    "amqplib": "^2.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
@@ -60,7 +62,9 @@
     ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "testPathIgnorePatterns": ["\\._"],
+    "testPathIgnorePatterns": [
+      "\\._"
+    ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

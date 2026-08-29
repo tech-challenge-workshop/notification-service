@@ -269,11 +269,11 @@ T7
 
 **Done when**:
 
-- [ ] `.gitignore` already contains `._*`; no regression is introduced.
-- [ ] Jest config adds an ignore/exclude pattern for `._*` files.
-- [ ] ESLint config adds `._*` to its `ignores` array.
-- [ ] A temporary `._*.spec.ts` file does not break `npm test` or `npm run lint`.
-- [ ] Build gate passes: `npm run build && npm run lint && npm test`.
+- [x] `.gitignore` already contains `._*`; no regression is introduced.
+- [x] Jest config adds an ignore/exclude pattern for `._*` files.
+- [x] ESLint config adds `._*` to its `ignores` array.
+- [x] A temporary `._*.spec.ts` file does not break `npm test` or `npm run lint`.
+- [x] Build gate passes: `npm run build && npm run lint && npm test`.
 
 **Tests**: build gate
 **Gate**: build

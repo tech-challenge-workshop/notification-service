@@ -8,19 +8,19 @@
 
 ## Primary technology context
 
-NestJS and TypeScript, RabbitMQ, and Amazon SES.
+NestJS and TypeScript, RabbitMQ, and SMTP (Mailpit locally).
 
 ## Integrations
 
 - Consumes versioned terminal events published by Processing Catalog through RabbitMQ.
-- Sends email through Amazon SES.
+- Sends email over SMTP.
 - Uses the terminal event's owner identity and result details without changing Processing Request state.
 
 ## Does not own
 
 - Processing Request lifecycle transitions, request persistence, or transactional outbox operations.
-- HTTP authentication, status lookup, or presigned S3 URL issuance.
-- FFprobe/FFmpeg processing, ZIP generation, or S3 binary storage.
+- HTTP authentication, status lookup, or presigned storage URL issuance.
+- FFprobe/FFmpeg processing, ZIP generation, or binary object storage.
 - Shared database tables with other services.
 
 ## Source of truth

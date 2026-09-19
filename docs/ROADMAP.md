@@ -9,7 +9,7 @@ Deliver independent, idempotent notification of completed and failed video-proce
 1. **Bootstrap and quality**: restore dependencies, make Nest gates green, and establish CI.
 2. **Terminal-event consumption**: consume versioned completion and failure events from RabbitMQ and validate their contract.
 3. **Idempotent delivery**: persist a service-owned delivery record and prevent duplicate email sends for repeated events.
-4. **SES integration**: render safe success/failure messages and send through Amazon SES without changing Processing Request state.
+4. **SMTP integration**: render safe success/failure messages and send over SMTP without changing Processing Request state.
 5. **Operations**: record and monitor email failures, add integration tests, telemetry, containerization, and deployment configuration.
 
 ## Acceptance boundaries

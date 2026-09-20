@@ -9,6 +9,16 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:4-management-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

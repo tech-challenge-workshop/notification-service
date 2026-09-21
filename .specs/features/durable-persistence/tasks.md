@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/durable-persistence/design.md`
-**Status**: Draft
+**Status**: Complete
 
 ---
 
@@ -76,13 +76,15 @@ T5
 
 **Done when**:
 
-- [ ] Connection settings come from the environment with no credential in the repository
-- [ ] `synchronize` is off, so migrations are the only way the schema changes
-- [ ] The service still boots with the in-memory repository when no database is configured
-- [ ] Quick gate passes: `npm test`
+- [x] Connection settings come from the environment with no credential in the repository
+- [x] `synchronize` is off, so migrations are the only way the schema changes
+- [x] The service still boots with the in-memory repository when no database is configured
+- [x] Quick gate passes: `npm test`
 
 **Tests**: none
 **Gate**: quick
+
+**Evidence**: `0ea9fba`. `data-source.ts` aponta para o schema `notification` sob role propria, sem acesso ao schema do catalog. `synchronize` desligado (AD-009).
 
 ---
 
@@ -101,15 +103,17 @@ T5
 
 **Done when**:
 
-- [ ] `event_id` is the primary key, so deduplication is a schema guarantee rather than an application convention
-- [ ] `zip_storage_key` and `failure_reason` are nullable and persist as absent rather than as empty strings
-- [ ] `processing_request_id` is indexed, since the observation route reads by it
-- [ ] The entity carries no persistence annotation into the domain class
-- [ ] Applying the migration twice makes no change on the second run
-- [ ] Full gate passes
+- [x] `event_id` is the primary key, so deduplication is a schema guarantee rather than an application convention
+- [x] `zip_storage_key` and `failure_reason` are nullable and persist as absent rather than as empty strings
+- [x] `processing_request_id` is indexed, since the observation route reads by it
+- [x] The entity carries no persistence annotation into the domain class
+- [x] Applying the migration twice makes no change on the second run
+- [x] Full gate passes
 
 **Tests**: integration
 **Gate**: full
+
+**Evidence**: `0ea9fba`. `event_id` tipado `text`, nao `uuid`: o contrato declara string, e o e2e daqui rejeitou ids nao-UUID - foi este servico que expos o mesmo defeito latente no catalog.
 
 ---
 
@@ -128,15 +132,17 @@ T5
 
 **Done when**:
 
-- [ ] Every port method is exercised against a real PostgreSQL
-- [ ] A record written, then read after the connection is re-established, returns every field by value
-- [ ] Two concurrent saves of the same `eventId` produce exactly one row and neither raises
-- [ ] A unique violation is **not** surfaced as a persistence error, since that would requeue forever against a row that is already correct
-- [ ] Any other failure still surfaces as `DeliveryPersistenceError`, so the consumer keeps requeuing what a retry can fix
-- [ ] Full gate passes
+- [x] Every port method is exercised against a real PostgreSQL
+- [x] A record written, then read after the connection is re-established, returns every field by value
+- [x] Two concurrent saves of the same `eventId` produce exactly one row and neither raises
+- [x] A unique violation is **not** surfaced as a persistence error, since that would requeue forever against a row that is already correct
+- [x] Any other failure still surfaces as `DeliveryPersistenceError`, so the consumer keeps requeuing what a retry can fix
+- [x] Full gate passes
 
 **Tests**: integration
 **Gate**: full
+
+**Evidence**: `0ea9fba`. `TypeOrmDeliveryRepository` traduz violacao de unicidade do PostgreSQL (`23505`) no registro ja existente em vez de erro de persistencia. Isso importa: os dois escritores concorrentes precisam ter sucesso, senao o perdedor requeue para sempre contra uma linha que ja esta correta. O e2e encena a corrida com `Promise.all` e verifica que sobra exatamente uma linha.
 
 ---
 
@@ -155,12 +161,14 @@ T5
 
 **Done when**:
 
-- [ ] Readiness is false when the database is unreachable and true when it is up
-- [ ] Liveness stays healthy while the database is down
-- [ ] Build gate passes
+- [x] Readiness is false when the database is unreachable and true when it is up
+- [x] Liveness stays healthy while the database is down
+- [x] Build gate passes
 
 **Tests**: unit
 **Gate**: build
+
+**Evidence**: `0ea9fba`. `GET /health` da stack em execucao responde `{"status":"ok","ready":true}`, com readiness cobrindo broker e banco - com o banco fora, todo evento terminal viraria apenas requeue. Liveness nao depende do banco.
 
 ---
 
@@ -179,13 +187,15 @@ T5
 
 **Done when**:
 
-- [ ] A completed and a failed delivery are recorded, then read through a new data source with every field intact
-- [ ] Replaying both events leaves the row count and every stored field unchanged, asserted by value and not by count alone
-- [ ] A contract violation still records nothing, so an invalid event never becomes the cached answer for a redelivery
-- [ ] Build gate passes
+- [x] A completed and a failed delivery are recorded, then read through a new data source with every field intact
+- [x] Replaying both events leaves the row count and every stored field unchanged, asserted by value and not by count alone
+- [x] A contract violation still records nothing, so an invalid event never becomes the cached answer for a redelivery
+- [x] Build gate passes
 
 **Tests**: integration
 **Gate**: build
+
+**Evidence**: `0ea9fba`. Durabilidade provada contra PostgreSQL: campos preservados em COMPLETED e em FAILED, sobrevivencia a uma nova conexao, redelivery absorvida sem alterar um unico campo armazenado, e nada gravado para um evento que contradiz o proprio status. Gate completo do notification: lint=0, typecheck=0, `npm test` 48/48, build=0, `npm run test:e2e` 15/15 contra PostgreSQL.
 
 **Commit**: `feat(persistence): make the delivery record durable`
 

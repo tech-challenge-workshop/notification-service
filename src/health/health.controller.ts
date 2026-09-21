@@ -1,15 +1,21 @@
 import { Controller, Get } from '@nestjs/common';
 import { RabbitMqHealthIndicator } from './rabbitmq-health.indicator';
+import { DatabaseHealthIndicator } from './database.health-indicator';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly rabbitMqHealth: RabbitMqHealthIndicator) {}
+  constructor(
+    private readonly rabbitMqHealth: RabbitMqHealthIndicator,
+    private readonly databaseHealth: DatabaseHealthIndicator,
+  ) {}
 
   @Get()
-  health(): { status: string; ready: boolean } {
-    return {
-      status: 'ok',
-      ready: this.rabbitMqHealth.isReady(),
-    };
+  async health(): Promise<{ status: string; ready: boolean }> {
+    // Readiness covers both dependencies: with the database down every
+    // terminal event would only ever become a requeue.
+    const ready =
+      this.rabbitMqHealth.isReady() && (await this.databaseHealth.isHealthy());
+
+    return { status: 'ok', ready };
   }
 }

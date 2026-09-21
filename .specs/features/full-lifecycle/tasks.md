@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/full-lifecycle/design.md`
-**Status**: Draft
+**Status**: Done
 
 ---
 
@@ -73,9 +73,9 @@ T4 → T5
 
 **Done when**:
 
-- [ ] Both fields are optional and typed as strings
-- [ ] The existing repository and its tests compile unchanged
-- [ ] Quick gate passes: `npm test`
+- [x] Both fields are optional and typed as strings
+- [x] The existing repository and its tests compile unchanged
+- [x] Quick gate passes: `npm test`
 
 **Tests**: none
 **Gate**: quick
@@ -97,13 +97,13 @@ T4 → T5
 
 **Done when**:
 
-- [ ] A `COMPLETED` event without `zipStorageKey` is refused with `MISSING_ZIP_STORAGE_KEY` and records nothing
-- [ ] A `FAILED` event without `failureReason` is refused with `MISSING_FAILURE_REASON` and records nothing
-- [ ] An event carrying both fields is refused with `AMBIGUOUS_TERMINAL_OUTCOME`
-- [ ] A `failureReason` that is present but empty or whitespace is treated as absent
-- [ ] Validation runs **before** the `findByEventId` lookup, asserted by a test in which an invalid event is not served from a prior record
-- [ ] The existing invalid-status behaviour is unchanged, with no assertion weakened
-- [ ] Quick gate passes: `npm test`
+- [x] A `COMPLETED` event without `zipStorageKey` is refused with `MISSING_ZIP_STORAGE_KEY` and records nothing
+- [x] A `FAILED` event without `failureReason` is refused with `MISSING_FAILURE_REASON` and records nothing
+- [x] An event carrying both fields is refused with `AMBIGUOUS_TERMINAL_OUTCOME`
+- [x] A `failureReason` that is present but empty or whitespace is treated as absent
+- [x] Validation runs **before** the `findByEventId` lookup, asserted by a test in which an invalid event is not served from a prior record
+- [x] The existing invalid-status behaviour is unchanged, with no assertion weakened
+- [x] Quick gate passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
@@ -125,11 +125,11 @@ T4 → T5
 
 **Done when**:
 
-- [ ] A completed event stores the `zipStorageKey` and leaves `failureReason` unset
-- [ ] A failed event stores the `failureReason` and leaves `zipStorageKey` unset
-- [ ] `ownerUserId` and `processingRequestId` are asserted on the stored record, by value
-- [ ] A duplicate `eventId` returns the existing record with its fields unmodified, asserted by value rather than by record count alone
-- [ ] Quick gate passes: `npm test`
+- [x] A completed event stores the `zipStorageKey` and leaves `failureReason` unset
+- [x] A failed event stores the `failureReason` and leaves `zipStorageKey` unset
+- [x] `ownerUserId` and `processingRequestId` are asserted on the stored record, by value
+- [x] A duplicate `eventId` returns the existing record with its fields unmodified, asserted by value rather than by record count alone
+- [x] Quick gate passes: `npm test`
 
 **Tests**: unit
 **Gate**: quick
@@ -151,11 +151,11 @@ T4 → T5
 
 **Done when**:
 
-- [ ] Each of the three new violations is asserted to nack with `requeue` false
-- [ ] A `DeliveryPersistenceError` is asserted to nack with `requeue` true
-- [ ] The rejection is asserted to be logged with the `eventId` and the reason
-- [ ] Assertions target the nack arguments, not only that nack was called
-- [ ] Full gate passes with a broker running: `npm test && npm run test:e2e`
+- [x] Each of the three new violations is asserted to nack with `requeue` false
+- [x] A `DeliveryPersistenceError` is asserted to nack with `requeue` true
+- [x] The rejection is asserted to be logged with the `eventId` and the reason
+- [x] Assertions target the nack arguments, not only that nack was called
+- [x] Full gate passes with a broker running: `npm test && npm run test:e2e`
 
 **Tests**: unit
 **Gate**: full
@@ -177,10 +177,10 @@ T4 → T5
 
 **Done when**:
 
-- [ ] A completed event produces a record carrying its `zipStorageKey`
-- [ ] A failed event produces a record carrying its `failureReason`
-- [ ] Redelivering both leaves the records unchanged, asserted by value
-- [ ] Build gate passes: `npm run lint && npm test && npm run test:e2e && npm run build`
+- [x] A completed event produces a record carrying its `zipStorageKey`
+- [x] A failed event produces a record carrying its `failureReason`
+- [x] Redelivering both leaves the records unchanged, asserted by value
+- [x] Build gate passes: `npm run lint && npm test && npm run test:e2e && npm run build`
 
 **Tests**: e2e
 **Gate**: build
@@ -252,3 +252,27 @@ T1 is the only `Tests: none`, matching the matrix for a declaration that carries
 This slice's strictness depends on a change landing in `processing-catalog` in the same slice: its `TerminalEventDto` must gain `failureReason` and make `zipStorageKey` optional.
 
 Enabling T2 before that lands would start rejecting terminal events the Catalog still publishes in the old shape. Verify the Catalog's widened contract before merging this repository's change.
+
+---
+
+## Execution record
+
+**Completed**: 2026-09-21 · merged in [#4](https://github.com/tech-challenge-workshop/notification-service/pull/4)
+
+Final gate: lint, typecheck, 43 unit tests, 8 e2e against a real broker, build - all
+green.
+
+### Deviations
+
+None. The five tasks executed as planned.
+
+### Existing assertions updated
+
+One test built a `FAILED` event by spreading a completed one, so it carried both a
+storage key and a reason - exactly what LC-07 now refuses. It was corrected to carry
+only the reason, and strengthened to assert both fields by value.
+
+### Cross-repository ordering, as planned
+
+This repository's strictness depends on the Catalog widening `TerminalEventDto`. The
+pull request body carried that note, and the Catalog merged first.

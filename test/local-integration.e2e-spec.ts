@@ -113,6 +113,52 @@ describe('Local integration (e2e)', () => {
     expect(body.processingRequestId).toBe(event.processingRequestId);
     expect(body.ownerUserId).toBe(event.ownerUserId);
     expect(body.status).toBe('COMPLETED');
+    expect(body.zipStorageKey).toBe(event.zipStorageKey);
+    expect(body.failureReason).toBeUndefined();
+  });
+
+  it('records a FAILED delivery carrying its reason', async () => {
+    const event: TerminalEventDto = {
+      eventId: 'evt-integration-failed',
+      processingRequestId: 'req-integration-failed',
+      ownerUserId: 'user-integration-1',
+      status: 'FAILED',
+      failureReason: 'O video excede a duracao maxima de 10 minutos.',
+      occurredAt: '2026-09-20T00:00:00Z',
+    };
+
+    publishTerminalEvent(event);
+
+    const response = await waitForDelivery(
+      httpRequest,
+      event.processingRequestId,
+    );
+    const body = response.body as TerminalEventDto;
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe('FAILED');
+    // The reason must survive the trip: S7 renders the email from this record.
+    expect(body.failureReason).toBe(event.failureReason);
+    expect(body.zipStorageKey).toBeUndefined();
+  });
+
+  it('records nothing for a FAILED event that carries no reason', async () => {
+    const event: TerminalEventDto = {
+      eventId: 'evt-integration-invalid',
+      processingRequestId: 'req-integration-invalid',
+      ownerUserId: 'user-integration-1',
+      status: 'FAILED',
+      occurredAt: '2026-09-20T00:00:00Z',
+    };
+
+    publishTerminalEvent(event);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    const response = await httpRequest.get(
+      `/local/deliveries/${event.processingRequestId}`,
+    );
+
+    expect(response.status).toBe(404);
   });
 
   it('keeps exactly one delivery record when the same event is published twice', async () => {

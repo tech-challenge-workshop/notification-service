@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { RmqContext } from '@nestjs/microservices';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
 import { DeliveryPersistenceError } from '../../domain/errors/delivery-persistence.error';
@@ -125,6 +126,69 @@ describe('TerminalEventConsumer', () => {
 
       expect(channel.ack).not.toHaveBeenCalled();
       expect(channel.nack).toHaveBeenCalledWith(message, false, true);
+    });
+  });
+
+  describe('transport policy per rejection', () => {
+    const valid = (): TerminalEventDto => ({
+      eventId: 'evt-policy',
+      processingRequestId: 'req-policy',
+      ownerUserId: 'user-policy',
+      status: 'COMPLETED',
+      zipStorageKey: 'zips/a.zip',
+      occurredAt: '2026-09-20T00:00:00Z',
+    });
+
+    it.each([
+      [
+        'MISSING_ZIP_STORAGE_KEY',
+        'A COMPLETED event must carry a zipStorageKey',
+      ],
+      ['MISSING_FAILURE_REASON', 'A FAILED event must carry a failureReason'],
+      ['AMBIGUOUS_TERMINAL_OUTCOME', 'never both'],
+    ])('nacks %s without requeue', async (code, message_) => {
+      recordDeliveryMock.mockRejectedValue(
+        new InvalidTerminalEventError(
+          message_,
+          code as ConstructorParameters<typeof InvalidTerminalEventError>[1],
+        ),
+      );
+
+      await consumer.handleTerminalEvent(valid(), context);
+
+      // A contract violation cannot become valid by being redelivered.
+      expect(channel.nack).toHaveBeenCalledWith(message, false, false);
+      expect(channel.ack).not.toHaveBeenCalled();
+    });
+
+    it('nacks a persistence fault with requeue, because a retry can succeed', async () => {
+      recordDeliveryMock.mockRejectedValue(
+        new DeliveryPersistenceError('repository unavailable'),
+      );
+
+      await consumer.handleTerminalEvent(valid(), context);
+
+      expect(channel.nack).toHaveBeenCalledWith(message, false, true);
+      expect(channel.ack).not.toHaveBeenCalled();
+    });
+
+    it('logs the rejection with its eventId and the reason', async () => {
+      const logged = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      recordDeliveryMock.mockRejectedValue(
+        new InvalidTerminalEventError(
+          'A FAILED event must carry a failureReason',
+          'MISSING_FAILURE_REASON',
+        ),
+      );
+
+      await consumer.handleTerminalEvent(valid(), context);
+
+      const line = logged.mock.calls.map((c) => String(c[0])).join(' ');
+      expect(line).toContain('evt-policy');
+      expect(line).toContain('failureReason');
+      logged.mockRestore();
     });
   });
 });

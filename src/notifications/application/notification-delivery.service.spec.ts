@@ -55,13 +55,16 @@ describe('NotificationDeliveryService', () => {
       const event: TerminalEventDto = {
         ...validCompletedEvent(),
         status: 'FAILED',
-        failureReason: 'PROCESSAMENTO_FALHOU',
+        zipStorageKey: undefined,
+        failureReason: 'Nao foi possivel processar o video.',
       };
 
       const result = await service.recordDelivery(event);
 
       expect(result.status).toBe('FAILED');
       expect(result.eventId).toBe('evt-1');
+      expect(result.failureReason).toBe('Nao foi possivel processar o video.');
+      expect(result.zipStorageKey).toBeUndefined();
     });
 
     it('should return the existing record for a duplicate eventId without creating a second one', async () => {
@@ -108,6 +111,89 @@ describe('NotificationDeliveryService', () => {
       await expect(service.recordDelivery(event)).rejects.toThrow(
         DeliveryPersistenceError,
       );
+    });
+  });
+
+  describe('payload consistency', () => {
+    it('rejects a COMPLETED event with no zipStorageKey and records nothing', async () => {
+      await expect(
+        service.recordDelivery({
+          ...validCompletedEvent(),
+          zipStorageKey: undefined,
+        }),
+      ).rejects.toMatchObject({ code: 'MISSING_ZIP_STORAGE_KEY' });
+
+      await expect(repository.findByEventId('evt-1')).resolves.toBeUndefined();
+    });
+
+    it('rejects a FAILED event with no failureReason and records nothing', async () => {
+      await expect(
+        service.recordDelivery({
+          ...validCompletedEvent(),
+          status: 'FAILED',
+          zipStorageKey: undefined,
+        }),
+      ).rejects.toMatchObject({ code: 'MISSING_FAILURE_REASON' });
+
+      await expect(repository.findByEventId('evt-1')).resolves.toBeUndefined();
+    });
+
+    it('rejects an event carrying both a storage key and a failure reason', async () => {
+      await expect(
+        service.recordDelivery({
+          ...validCompletedEvent(),
+          failureReason: 'algo falhou',
+        }),
+      ).rejects.toMatchObject({ code: 'AMBIGUOUS_TERMINAL_OUTCOME' });
+
+      await expect(repository.findByEventId('evt-1')).resolves.toBeUndefined();
+    });
+
+    it('treats a whitespace-only failureReason as absent', async () => {
+      await expect(
+        service.recordDelivery({
+          ...validCompletedEvent(),
+          status: 'FAILED',
+          zipStorageKey: undefined,
+          failureReason: '   ',
+        }),
+      ).rejects.toMatchObject({ code: 'MISSING_FAILURE_REASON' });
+    });
+
+    it('validates before deduplication, so an invalid event is never served from a prior record', async () => {
+      // A valid event is recorded under this eventId first.
+      await service.recordDelivery(validCompletedEvent());
+
+      // The same eventId arriving inconsistent must be refused, not answered
+      // from the record the earlier delivery created.
+      await expect(
+        service.recordDelivery({
+          ...validCompletedEvent(),
+          zipStorageKey: undefined,
+        }),
+      ).rejects.toMatchObject({ code: 'MISSING_ZIP_STORAGE_KEY' });
+    });
+  });
+
+  describe('outcome retention', () => {
+    it('keeps the storage key of a completed request and leaves the reason unset', async () => {
+      const record = await service.recordDelivery(validCompletedEvent());
+
+      expect(record.zipStorageKey).toBe(validCompletedEvent().zipStorageKey);
+      expect(record.failureReason).toBeUndefined();
+      expect(record.ownerUserId).toBe(validCompletedEvent().ownerUserId);
+      expect(record.processingRequestId).toBe(
+        validCompletedEvent().processingRequestId,
+      );
+    });
+
+    it('keeps the fields of an existing record unchanged on redelivery', async () => {
+      const first = await service.recordDelivery(validCompletedEvent());
+      const second = await service.recordDelivery(validCompletedEvent());
+
+      expect(second.zipStorageKey).toBe(first.zipStorageKey);
+      expect(second.failureReason).toBe(first.failureReason);
+      expect(second.recordedAt).toEqual(first.recordedAt);
     });
   });
 });

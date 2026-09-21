@@ -28,6 +28,30 @@ export class NotificationDeliveryService {
       );
     }
 
+    // A present-but-empty value carries nothing a notification could render,
+    // so it is treated as absent.
+    const zipStorageKey = event.zipStorageKey?.trim() || undefined;
+    const failureReason = event.failureReason?.trim() || undefined;
+
+    if (zipStorageKey && failureReason) {
+      throw new InvalidTerminalEventError(
+        'A terminal event carries either a storage key or a failure reason, never both',
+        'AMBIGUOUS_TERMINAL_OUTCOME',
+      );
+    }
+    if (event.status === 'COMPLETED' && !zipStorageKey) {
+      throw new InvalidTerminalEventError(
+        'A COMPLETED event must carry a zipStorageKey',
+        'MISSING_ZIP_STORAGE_KEY',
+      );
+    }
+    if (event.status === 'FAILED' && !failureReason) {
+      throw new InvalidTerminalEventError(
+        'A FAILED event must carry a failureReason',
+        'MISSING_FAILURE_REASON',
+      );
+    }
+
     try {
       const existing = await this.deliveryRepository.findByEventId(
         event.eventId,
@@ -41,6 +65,8 @@ export class NotificationDeliveryService {
       record.processingRequestId = event.processingRequestId;
       record.ownerUserId = event.ownerUserId;
       record.status = event.status;
+      record.zipStorageKey = zipStorageKey;
+      record.failureReason = failureReason;
       record.recordedAt = new Date();
 
       return await this.deliveryRepository.save(record);

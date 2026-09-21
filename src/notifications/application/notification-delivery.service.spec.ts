@@ -13,6 +13,16 @@ class StubDeliveryRepository implements DeliveryRepository {
     return Promise.resolve(this.records.get(eventId));
   }
 
+  findByProcessingRequestId(
+    processingRequestId: string,
+  ): Promise<DeliveryRecord | undefined> {
+    return Promise.resolve(
+      [...this.records.values()].find(
+        (record) => record.processingRequestId === processingRequestId,
+      ),
+    );
+  }
+
   save(record: DeliveryRecord): Promise<DeliveryRecord> {
     if (this.saveFailure) {
       return Promise.reject(this.saveFailure);

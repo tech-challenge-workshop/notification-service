@@ -129,6 +129,115 @@ describe('TerminalEventConsumer', () => {
     });
   });
 
+  describe('settling a failure (MSG-10, MSG-11)', () => {
+    const previousBackoff = process.env.RABBITMQ_RETRY_BACKOFF_MS;
+
+    beforeEach(() => {
+      delete process.env.RABBITMQ_RETRY_BACKOFF_MS;
+      jest.useFakeTimers();
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      jest.restoreAllMocks();
+      if (previousBackoff === undefined) {
+        delete process.env.RABBITMQ_RETRY_BACKOFF_MS;
+      } else {
+        process.env.RABBITMQ_RETRY_BACKOFF_MS = previousBackoff;
+      }
+    });
+
+    it('dead-letters a body that is not JSON at once, recording nothing', async () => {
+      message.content = Buffer.from('not json');
+
+      await consumer.handleTerminalEvent(validCompletedEvent(), context);
+
+      expect(recordDeliveryMock).not.toHaveBeenCalled();
+      expect(channel.ack).not.toHaveBeenCalled();
+      expect(channel.nack).toHaveBeenCalledTimes(1);
+      expect(channel.nack).toHaveBeenCalledWith(message, false, false);
+    });
+
+    it('dead-letters an invalid event at once', async () => {
+      recordDeliveryMock.mockRejectedValue(
+        new InvalidTerminalEventError(
+          'A FAILED event must carry a failureReason',
+          'MISSING_FAILURE_REASON',
+        ),
+      );
+
+      await consumer.handleTerminalEvent(validCompletedEvent(), context);
+
+      expect(channel.ack).not.toHaveBeenCalled();
+      expect(channel.nack).toHaveBeenCalledTimes(1);
+      expect(channel.nack).toHaveBeenCalledWith(message, false, false);
+    });
+
+    it('requeues a persistence fault only after the 1000 ms backoff', async () => {
+      recordDeliveryMock.mockRejectedValue(
+        new DeliveryPersistenceError('Database unavailable'),
+      );
+
+      const handled = consumer.handleTerminalEvent(
+        validCompletedEvent(),
+        context,
+      );
+      await jest.advanceTimersByTimeAsync(999);
+      expect(channel.nack).not.toHaveBeenCalled();
+
+      await jest.advanceTimersByTimeAsync(1);
+      await handled;
+      expect(channel.ack).not.toHaveBeenCalled();
+      expect(channel.nack).toHaveBeenCalledTimes(1);
+      expect(channel.nack).toHaveBeenCalledWith(message, false, true);
+    });
+
+    it('acknowledges a successful delivery without settling a failure', async () => {
+      recordDeliveryMock.mockResolvedValue({});
+
+      await consumer.handleTerminalEvent(validCompletedEvent(), context);
+
+      expect(channel.ack).toHaveBeenCalledWith(message);
+      expect(channel.nack).not.toHaveBeenCalled();
+    });
+
+    it('leaves the message unsettled when the channel closes during the pause', async () => {
+      // amqplib throws on ack/nack once its channel is closed; the broker then
+      // redelivers the unacked message.
+      let closed = false;
+      const settled: string[] = [];
+      const closingChannel = {
+        ack: () => {
+          if (closed) throw new Error('Channel closed');
+          settled.push('ack');
+        },
+        nack: () => {
+          if (closed) throw new Error('Channel closed');
+          settled.push('nack');
+        },
+      };
+      const closingContext = {
+        getChannelRef: () => closingChannel,
+        getMessage: () => message,
+      } as unknown as RmqContext;
+      recordDeliveryMock.mockRejectedValue(
+        new DeliveryPersistenceError('Database unavailable'),
+      );
+
+      const handled = consumer.handleTerminalEvent(
+        validCompletedEvent(),
+        closingContext,
+      );
+      await jest.advanceTimersByTimeAsync(500);
+      closed = true;
+      await jest.advanceTimersByTimeAsync(500);
+
+      await expect(handled).resolves.toBeUndefined();
+      expect(settled).toEqual([]);
+    });
+  });
+
   describe('transport policy per rejection', () => {
     const valid = (): TerminalEventDto => ({
       eventId: 'evt-policy',

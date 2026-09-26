@@ -66,13 +66,15 @@ T1 -> T2
 
 **Done when**:
 
-- [ ] Parsing cases: `""`, `"  "` and unset → 1000; `"0"` → 0; `"250"` → 250; `"-1"` and `"abc"` → 1000
-- [ ] With fake timers, a transient error is not nacked at 999 ms and is nacked with `requeue=true` at 1000 ms
-- [ ] A permanent error is nacked with `requeue=false` without advancing the clock
-- [ ] Quick gate passes
+- [x] Parsing cases: `""`, `"  "` and unset → 1000; `"0"` → 0; `"250"` → 250; `"-1"` and `"abc"` → 1000
+- [x] With fake timers, a transient error is not nacked at 999 ms and is nacked with `requeue=true` at 1000 ms
+- [x] A permanent error is nacked with `requeue=false` without advancing the clock
+- [x] Quick gate passes
 
 **Tests**: unit
 **Gate**: quick
+
+**Status**: Done. Quick gate `npm test` 66/66 (was 50; +16 in `settle-failed-message.spec.ts`).
 
 ---
 

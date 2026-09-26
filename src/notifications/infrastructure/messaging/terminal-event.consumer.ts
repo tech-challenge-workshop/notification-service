@@ -1,9 +1,9 @@
 import { Controller, Logger } from '@nestjs/common';
 import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
-import { DeliveryPersistenceError } from '../../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../../dtos/terminal-event.dto';
+import { settleFailedMessage } from './settle-failed-message';
 
 interface RabbitChannel {
   ack(message: unknown): void;
@@ -24,9 +24,13 @@ export class TerminalEventConsumer {
     @Ctx() context: RmqContext,
   ): Promise<void> {
     const channel = context.getChannelRef() as RabbitChannel;
-    const message = context.getMessage();
+    const message = context.getMessage() as { content: Buffer };
 
     try {
+      // Nest falls back to the raw string when the body is not JSON, so the
+      // body is parsed here: the SyntaxError then classifies as permanent.
+      JSON.parse(message.content.toString());
+
       if (!event.processingRequestId) {
         throw new InvalidTerminalEventError(
           'Missing processingRequestId',
@@ -41,12 +45,14 @@ export class TerminalEventConsumer {
         `Failed to process terminal event ${event.eventId}: ${error instanceof Error ? error.message : String(error)}`,
       );
 
-      if (error instanceof InvalidTerminalEventError) {
-        channel.nack(message, false, false);
-      } else if (error instanceof DeliveryPersistenceError) {
-        channel.nack(message, false, true);
-      } else {
-        channel.nack(message, false, true);
+      try {
+        await settleFailedMessage(channel, message, error);
+      } catch (settleError) {
+        // The channel closed during the pause (shutdown): the message stays
+        // unacked and the broker redelivers it.
+        this.logger.warn(
+          `Could not settle terminal event ${event.eventId}: ${settleError instanceof Error ? settleError.message : String(settleError)}`,
+        );
       }
     }
   }

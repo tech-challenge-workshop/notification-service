@@ -94,18 +94,20 @@ T1 -> T2
 
 **Done when**:
 
-- [ ] Unit:
+- [x] Unit:
   - `not json` → `nack(false)` at once, with no delivery recorded
   - invalid event → `nack(false)`
   - `DeliveryPersistenceError` → `nack(true)` only after the backoff
   - success → `ack`
-- [ ] Unit: closing during a pause leaves the message neither acked nor nacked, per the spec's edge case
-- [ ] Existing e2e green
-- [ ] Removing the pause, or treating `SyntaxError` as transient, turns a test red
-- [ ] Build gate passes
+- [x] Unit: closing during a pause leaves the message neither acked nor nacked, per the spec's edge case
+- [x] Existing e2e green
+- [x] Removing the pause, or treating `SyntaxError` as transient, turns a test red
+- [x] Build gate passes
 
 **Tests**: unit + e2e
 **Gate**: build
+
+**Status**: Done. Build gate green: lint=0, typecheck=0, `npm test` 71/71 (was 66; +5 in the consumer spec), `npm run test:e2e` 15/15 against PostgreSQL and RabbitMQ (0 skipped), build=0. Negatives: removing the pause turns 3 tests red; treating `SyntaxError` as transient turns 3 red; dropping the consumer parse turns the `not json` test red. Note: in the running composition Nest's ServerRMQ already nacks a non-JSON body with `requeue=false` before the handler (no pattern, so no handler); the consumer parse covers the handler path. A nack that throws because the channel closed during the pause is caught and logged, leaving the message unacked for redelivery.
 
 ---
 

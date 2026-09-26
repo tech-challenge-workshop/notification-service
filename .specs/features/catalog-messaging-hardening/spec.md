@@ -78,8 +78,8 @@ Decisions of 2026-09-26 are in `processing-catalog/.specs/features/catalog-messa
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| MSG-10 | P1: Pause before requeue (AD-012) | Execute | Implementing |
-| MSG-11 | P2: Non-JSON and invalid events dead-lettered | Execute | Implementing |
+| MSG-10 | P1: Pause before requeue (AD-012) | Validate | Verified |
+| MSG-11 | P2: Non-JSON and invalid events dead-lettered | Validate | Implementing (open: V48, null data envelope never settled) |
 
 **ID format:** `[CATEGORY]-[NUMBER]`
 

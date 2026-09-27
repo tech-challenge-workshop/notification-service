@@ -2,6 +2,13 @@ import { Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { NotificationDeliveryService } from './application/notification-delivery.service';
 import { DELIVERY_REPOSITORY } from './domain/delivery-repository.token';
+import { EMAIL_SENDER } from './domain/email-sender.token';
+import { InMemoryEmailSender } from './infrastructure/email/in-memory-email-sender';
+import { SmtpEmailSender } from './infrastructure/email/smtp-email-sender';
+import {
+  buildSmtpOptions,
+  isSmtpConfigured,
+} from './infrastructure/email/smtp-config';
 import { TerminalEventConsumer } from './infrastructure/messaging/terminal-event.consumer';
 import { InMemoryDeliveryRepository } from './infrastructure/persistence/in-memory-delivery.repository';
 import {
@@ -29,11 +36,24 @@ const dataSourceProvider = {
   },
 };
 
+/**
+ * With no SMTP host configured the service runs on the in-memory sender,
+ * mirroring the database's fallback above. Not yet consumed by anything.
+ */
+const emailSenderProvider = {
+  provide: EMAIL_SENDER,
+  useFactory: () =>
+    isSmtpConfigured()
+      ? new SmtpEmailSender(buildSmtpOptions())
+      : new InMemoryEmailSender(),
+};
+
 @Module({
   controllers: [TerminalEventConsumer],
   providers: [
     NotificationDeliveryService,
     dataSourceProvider,
+    emailSenderProvider,
     {
       provide: DELIVERY_REPOSITORY,
       useFactory: (dataSource?: DataSource) =>

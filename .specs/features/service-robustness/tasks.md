@@ -57,13 +57,15 @@ T1 -> T2
 - Skill: NONE
 
 **Done when**:
-- [ ] Unit: `data: null`, missing, `[]`, `"x"`, `1` and `{}` each get `nack(false)` immediately, with no throw. The `null` case is seen red first
-- [ ] Unit: a `SyntaxError` thrown by the repository gets `nack(true)` after the backoff; `not json` gets `nack(false)`
-- [ ] Putting `event.eventId` back in the `catch` fails the null test
-- [ ] Quick gate passes
+- [x] Unit: `data: null`, missing, `[]`, `"x"`, `1` and `{}` each get `nack(false)` immediately, with no throw. The `null` case is seen red first
+- [x] Unit: a `SyntaxError` thrown by the repository gets `nack(true)` after the backoff; `not json` gets `nack(false)`
+- [x] Putting `event.eventId` back in the `catch` fails the null test
+- [x] Quick gate passes
 
 **Tests**: unit
 **Gate**: quick
+
+**Status**: ✅ Complete. Seen red first: `null` and missing rejected with `TypeError ... reading 'eventId'` from the `catch`; the delivery-side `SyntaxError` was nacked at once. Negative: an unguarded `event.eventId` in the `catch` fails the `null` and missing cases. Quick gate: 79 passed (was 71). Two existing assertions in `settle-failed-message.spec.ts` changed as ROB-05 requires: a bare `SyntaxError` is now transient, and the not-JSON case is `InvalidTerminalEventError('Body is not JSON', 'MALFORMED_JSON')`. `MALFORMED_JSON` and `INVALID_PAYLOAD` were added to the closed code union.
 
 ---
 

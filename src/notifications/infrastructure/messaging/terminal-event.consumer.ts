@@ -20,29 +20,23 @@ export class TerminalEventConsumer {
 
   @EventPattern('terminal.event')
   async handleTerminalEvent(
-    @Payload() event: TerminalEventDto,
+    @Payload() payload: unknown,
     @Ctx() context: RmqContext,
   ): Promise<void> {
     const channel = context.getChannelRef() as RabbitChannel;
     const message = context.getMessage() as { content: Buffer };
+    // Read by the catch, which must not throw: until parseEnvelope has
+    // validated it, the payload may be null, missing or a primitive (V48).
+    const event = payload as { eventId?: string } | null | undefined;
 
     try {
-      // Nest falls back to the raw string when the body is not JSON, so the
-      // body is parsed here: the SyntaxError then classifies as permanent.
-      JSON.parse(message.content.toString());
-
-      if (!event.processingRequestId) {
-        throw new InvalidTerminalEventError(
-          'Missing processingRequestId',
-          'MISSING_PROCESSING_REQUEST_ID',
-        );
-      }
-
-      await this.notificationDeliveryService.recordDelivery(event);
+      await this.notificationDeliveryService.recordDelivery(
+        parseEnvelope(message.content, payload),
+      );
       channel.ack(message);
     } catch (error) {
       this.logger.error(
-        `Failed to process terminal event ${event.eventId}: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to process terminal event ${event?.eventId ?? 'unknown'}: ${error instanceof Error ? error.message : String(error)}`,
       );
 
       try {
@@ -51,9 +45,52 @@ export class TerminalEventConsumer {
         // The channel closed during the pause (shutdown): the message stays
         // unacked and the broker redelivers it.
         this.logger.warn(
-          `Could not settle terminal event ${event.eventId}: ${settleError instanceof Error ? settleError.message : String(settleError)}`,
+          `Could not settle terminal event ${event?.eventId ?? 'unknown'}: ${settleError instanceof Error ? settleError.message : String(settleError)}`,
         );
       }
     }
   }
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Validates what the consumer is about to act on, so that every message it
+ * can never handle fails here as an `InvalidTerminalEventError`, the one
+ * failure `settleFailedMessage` dead-letters at once (ROB-04, ROB-05).
+ *
+ * Nest falls back to the raw string when the body is not JSON, so the body
+ * is parsed here; its SyntaxError is reported as `MALFORMED_JSON`.
+ */
+function parseEnvelope(content: Buffer, payload: unknown): TerminalEventDto {
+  try {
+    JSON.parse(content.toString());
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new InvalidTerminalEventError('Body is not JSON', 'MALFORMED_JSON');
+    }
+    throw error;
+  }
+
+  if (!isObject(payload)) {
+    throw new InvalidTerminalEventError(
+      'Payload is not an object',
+      'INVALID_PAYLOAD',
+    );
+  }
+
+  const { processingRequestId } = payload;
+  if (
+    typeof processingRequestId !== 'string' ||
+    processingRequestId.trim() === ''
+  ) {
+    throw new InvalidTerminalEventError(
+      'Missing processingRequestId',
+      'MISSING_PROCESSING_REQUEST_ID',
+    );
+  }
+
+  return payload as unknown as TerminalEventDto;
 }

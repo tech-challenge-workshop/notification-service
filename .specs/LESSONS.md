@@ -20,6 +20,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: src/notifications/infrastructure/messaging/terminal-event.consumer.ts:34 (messaging)
 - last seen: 2026-09-26T19:10:18Z
 
+### L-002 - Every validation clause needs its own rejecting input; a clause no test isolates can be deleted with the suite green.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `messaging` · harmful: 0
+- features: service-robustness
+- evidence: src/notifications/infrastructure/messaging/terminal-event.consumer.ts:85 (messaging)
+- last seen: 2026-09-27T01:07:35Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

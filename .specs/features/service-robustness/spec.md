@@ -83,8 +83,8 @@ Decisions of 2026-09-26 are in `processing-catalog/.specs/features/service-robus
 
 | Requirement ID | Story | Phase | Status |
 | --- | --- | --- | --- |
-| ROB-04 | P1: Invalid envelopes dead-lettered (V48) | Execute | Implementing |
-| ROB-05 | P2: Only a body parse error is malformed (V48) | Execute | Implementing |
+| ROB-04 | P1: Invalid envelopes dead-lettered (V48) | Validate | Implementing (open: V57, id-shape checks and the settle warning untested) |
+| ROB-05 | P2: Only a body parse error is malformed (V48) | Validate | Verified |
 
 **ID format:** `[CATEGORY]-[NUMBER]`
 

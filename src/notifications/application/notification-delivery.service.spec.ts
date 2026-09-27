@@ -3,6 +3,7 @@ import { DeliveryRepository } from '../domain/delivery.repository';
 import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
+import { InMemoryEmailSender } from '../infrastructure/email/in-memory-email-sender';
 import { NotificationDeliveryService } from './notification-delivery.service';
 
 class StubDeliveryRepository implements DeliveryRepository {
@@ -53,10 +54,12 @@ class StubDeliveryRepository implements DeliveryRepository {
 describe('NotificationDeliveryService', () => {
   let service: NotificationDeliveryService;
   let repository: StubDeliveryRepository;
+  let emailSender: InMemoryEmailSender;
 
   beforeEach(() => {
     repository = new StubDeliveryRepository();
-    service = new NotificationDeliveryService(repository);
+    emailSender = new InMemoryEmailSender();
+    service = new NotificationDeliveryService(repository, emailSender);
   });
 
   const validCompletedEvent = (): TerminalEventDto => ({
@@ -215,6 +218,79 @@ describe('NotificationDeliveryService', () => {
           zipStorageKey: undefined,
         }),
       ).rejects.toMatchObject({ code: 'MISSING_ZIP_STORAGE_KEY' });
+    });
+  });
+
+  describe('email sending', () => {
+    it('sends the completed template exactly once for a new event', async () => {
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(1);
+      expect(emailSender.sent[0].to).toBe('owner@example.com');
+      expect(emailSender.sent[0].text).toContain('req-1');
+    });
+
+    it('sends the failed template with only the safe failureReason', async () => {
+      const event: TerminalEventDto = {
+        ...validCompletedEvent(),
+        status: 'FAILED',
+        zipStorageKey: undefined,
+        failureReason: 'Nao foi possivel processar o video.',
+      };
+
+      await service.recordDelivery(event);
+
+      expect(emailSender.sent).toHaveLength(1);
+      expect(emailSender.sent[0].text).toContain(
+        'Nao foi possivel processar o video.',
+      );
+    });
+
+    it('does not send a second email when the same eventId is redelivered after a completed attempt', async () => {
+      await service.recordDelivery(validCompletedEvent());
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(1);
+    });
+
+    it('still sends exactly one email when a redelivered eventId finds a row with no prior outcome (crash recovery)', async () => {
+      // Simulates a crash between save() and send(): the record exists, but
+      // neither emailSentAt nor emailError has ever been set on it.
+      const record = new DeliveryRecord();
+      Object.assign(record, {
+        eventId: 'evt-1',
+        processingRequestId: 'req-1',
+        ownerUserId: 'user-1',
+        status: 'COMPLETED',
+        zipStorageKey: 'zip-1',
+        recordedAt: new Date(),
+      });
+      await repository.save(record);
+
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(1);
+    });
+
+    it('records emailError and does not throw when the send fails, and does not send again on redelivery', async () => {
+      // Long enough (and with the address positioned past the 200-char
+      // truncation boundary) that the assertion below only passes if
+      // MAX_ERROR_MESSAGE_LENGTH truncation genuinely removes the address,
+      // not because the short literal happened to fit under the limit.
+      const rawTransportError = `${'connection diagnostics '.repeat(10)}connect ECONNREFUSED 1.2.3.4:1025`;
+      emailSender.send = () => Promise.reject(new Error(rawTransportError));
+
+      const result = await service.recordDelivery(validCompletedEvent());
+      expect(result.emailError).toBeDefined();
+      expect(result.emailError).not.toContain('1.2.3.4'); // bounded, not the raw error
+
+      emailSender.send = (m) => {
+        emailSender.sent.push(m);
+        return Promise.resolve();
+      };
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(0); // already-failed attempt is not retried
     });
   });
 

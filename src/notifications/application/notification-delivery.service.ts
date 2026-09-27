@@ -1,16 +1,25 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { DeliveryRecord } from '../domain/delivery-record';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 import { DELIVERY_REPOSITORY } from '../domain/delivery-repository.token';
+import { EMAIL_SENDER } from '../domain/email-sender.token';
+import type { EmailSender } from '../domain/email-sender';
 import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
+import { renderCompletedEmail, renderFailedEmail } from './email-templates';
+
+const MAX_ERROR_MESSAGE_LENGTH = 200;
 
 @Injectable()
 export class NotificationDeliveryService {
+  private readonly logger = new Logger(NotificationDeliveryService.name);
+
   constructor(
     @Inject(DELIVERY_REPOSITORY)
     private readonly deliveryRepository: DeliveryRepository,
+    @Inject(EMAIL_SENDER)
+    private readonly emailSender: EmailSender,
   ) {}
 
   async recordDelivery(event: TerminalEventDto): Promise<DeliveryRecord> {
@@ -61,23 +70,25 @@ export class NotificationDeliveryService {
     }
 
     try {
-      const existing = await this.deliveryRepository.findByEventId(
-        event.eventId,
-      );
-      if (existing) {
-        return existing;
+      let record = await this.deliveryRepository.findByEventId(event.eventId);
+      if (record && (record.emailSentAt || record.emailError)) {
+        return record; // an attempt already completed for this event
       }
 
-      const record = new DeliveryRecord();
-      record.eventId = event.eventId;
-      record.processingRequestId = event.processingRequestId;
-      record.ownerUserId = event.ownerUserId;
-      record.status = event.status;
-      record.zipStorageKey = zipStorageKey;
-      record.failureReason = failureReason;
-      record.recordedAt = new Date();
+      if (!record) {
+        record = new DeliveryRecord();
+        record.eventId = event.eventId;
+        record.processingRequestId = event.processingRequestId;
+        record.ownerUserId = event.ownerUserId;
+        record.status = event.status;
+        record.zipStorageKey = zipStorageKey;
+        record.failureReason = failureReason;
+        record.recordedAt = new Date();
+        record = await this.deliveryRepository.save(record);
+      }
 
-      return await this.deliveryRepository.save(record);
+      await this.attemptEmail(record, ownerEmail);
+      return record;
     } catch (error) {
       if (error instanceof InvalidTerminalEventError) {
         throw error;
@@ -87,6 +98,37 @@ export class NotificationDeliveryService {
         `Failed to record delivery for event ${event.eventId}`,
         error instanceof Error ? error : undefined,
       );
+    }
+  }
+
+  private async attemptEmail(
+    record: DeliveryRecord,
+    ownerEmail: string,
+  ): Promise<void> {
+    const template =
+      record.status === 'COMPLETED'
+        ? renderCompletedEmail({ processingRequestId: record.processingRequestId })
+        : renderFailedEmail({
+            processingRequestId: record.processingRequestId,
+            failureReason: record.failureReason ?? '',
+          });
+
+    try {
+      await this.emailSender.send({ to: ownerEmail, ...template });
+      record.emailSentAt = new Date();
+      await this.deliveryRepository.updateEmailOutcome(record.eventId, {
+        emailSentAt: record.emailSentAt,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown email send failure';
+      record.emailError = message.slice(0, MAX_ERROR_MESSAGE_LENGTH);
+      this.logger.warn(
+        `Email send failed for event ${record.eventId}: ${record.emailError}`,
+      );
+      await this.deliveryRepository.updateEmailOutcome(record.eventId, {
+        emailError: record.emailError,
+      });
     }
   }
 }

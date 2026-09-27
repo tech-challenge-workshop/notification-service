@@ -4,6 +4,7 @@ import { DeliveryRecord } from '../src/notifications/domain/delivery-record';
 import { createDataSource } from '../src/notifications/infrastructure/persistence/data-source';
 import { TypeOrmDeliveryRepository } from '../src/notifications/infrastructure/persistence/typeorm-delivery.repository';
 import { NotificationDeliveryService } from '../src/notifications/application/notification-delivery.service';
+import { InMemoryEmailSender } from '../src/notifications/infrastructure/email/in-memory-email-sender';
 import { TerminalEventDto } from '../src/notifications/dtos/terminal-event.dto';
 
 const describeIfDatabase = process.env.DATABASE_HOST ? describe : describe.skip;
@@ -18,7 +19,7 @@ describeIfDatabase('durable delivery record', () => {
     await dataSource.initialize();
     await dataSource.runMigrations();
     repository = new TypeOrmDeliveryRepository(dataSource);
-    service = new NotificationDeliveryService(repository);
+    service = new NotificationDeliveryService(repository, new InMemoryEmailSender());
   }, 30_000);
 
   afterAll(async () => {

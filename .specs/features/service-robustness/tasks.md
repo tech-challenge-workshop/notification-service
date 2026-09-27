@@ -82,14 +82,16 @@ T1 -> T2
 - Skill: NONE
 
 **Done when**:
-- [ ] Locally, against a broker loaded with the definitions: one message in the DLQ, with `x-death` showing rejected/1
-- [ ] With T1's change reverted (the old `catch`), the message stays unacked and the test fails
-- [ ] With `CI=true` and no URL, the suite fails
-- [ ] The workflow parses
-- [ ] Build gate passes
+- [x] Locally, against a broker loaded with the definitions: one message in the DLQ, with `x-death` showing rejected/1
+- [x] With T1's change reverted (the old `catch`), the message stays unacked and the test fails
+- [x] With `CI=true` and no URL, the suite fails
+- [x] The workflow parses
+- [x] Build gate passes
 
 **Tests**: integration
 **Gate**: build
+
+**Status**: ✅ Complete. The suite passes against a dedicated broker loaded with `definitions.json`. Negatives: with the old `catch` the DLQ stays at 0 and the queue shows 1 unacked message, so the test fails; `CI=true` without the URL fails on `RABBITMQ_TEST_URL must be set in CI`. `yaml.safe_load` parses the workflow. The CI job extends its existing `rabbitmq` service (adds 15672), widens the platform sparse checkout to `db/init` and `rabbitmq`, imports the definitions with the Worker's retry loop, and sets `RABBITMQ_TEST_URL` on the e2e step. Build gate, run the CI way (one definitions-loaded broker on 5672 for every suite, PostgreSQL configured): lint, typecheck, 79 unit, 16 e2e with 0 skipped, build. Without the URL locally: 15 passed, 1 skipped.
 
 ---
 

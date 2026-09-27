@@ -272,17 +272,21 @@ describe('NotificationDeliveryService', () => {
       expect(emailSender.sent).toHaveLength(1);
     });
 
-    it('records emailError and does not throw when the send fails, and does not send again on redelivery', async () => {
-      // Long enough (and with the address positioned past the 200-char
-      // truncation boundary) that the assertion below only passes if
-      // MAX_ERROR_MESSAGE_LENGTH truncation genuinely removes the address,
-      // not because the short literal happened to fit under the limit.
-      const rawTransportError = `${'connection diagnostics '.repeat(10)}connect ECONNREFUSED 1.2.3.4:1025`;
-      emailSender.send = () => Promise.reject(new Error(rawTransportError));
+    it('records emailError as a safe code, never the raw connection string, for a realistic nodemailer failure', async () => {
+      // Shaped exactly like a real nodemailer/Node socket failure: a short
+      // message (well under the 200-char truncation boundary) that still
+      // carries the SMTP host:port, plus the `code` property those errors
+      // actually set. A short message alone would slip through untouched.
+      const transportError = Object.assign(
+        new Error('connect ECONNREFUSED 127.0.0.1:1'),
+        { code: 'ECONNREFUSED' },
+      );
+      emailSender.send = () => Promise.reject(transportError);
 
       const result = await service.recordDelivery(validCompletedEvent());
-      expect(result.emailError).toBeDefined();
-      expect(result.emailError).not.toContain('1.2.3.4'); // bounded, not the raw error
+      expect(result.emailError).toBe('ECONNREFUSED');
+      expect(result.emailError).not.toMatch(/\d+\.\d+\.\d+\.\d+/); // no host/IP
+      expect(result.emailError).not.toMatch(/:\d+/); // no port
 
       emailSender.send = (m) => {
         emailSender.sent.push(m);

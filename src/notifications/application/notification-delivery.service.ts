@@ -71,6 +71,13 @@ export class NotificationDeliveryService {
 
     try {
       let record = await this.deliveryRepository.findByEventId(event.eventId);
+      // Note: this detects a *completed* attempt, not an in-progress one
+      // — two replicas racing on a message redelivered while the first is
+      // still mid-send can both pass this check and both send. A full fix
+      // needs an atomic UPDATE ... WHERE email_sent_at IS NULL claim across
+      // every DeliveryRepository implementer, which trades this rarer bug
+      // for a worse one (a successful claim followed by a failed send loses
+      // the email permanently). Accepted for a single-replica deployment.
       if (record && (record.emailSentAt || record.emailError)) {
         return record; // an attempt already completed for this event
       }
@@ -132,9 +139,16 @@ export class NotificationDeliveryService {
       await this.emailSender.send({ to: ownerEmail, ...template });
       outcome = { emailSentAt: new Date() };
     } catch (error) {
-      // An empty message must not collapse to '', which is falsy and would
-      // let the send-attempt gate miss it on redelivery.
-      const message = error instanceof Error ? error.message : '';
+      // Prefer the error's `code` over its `message` (EN-20: emailError must
+      // never carry the raw transport error, stack, or connection string).
+      // nodemailer/Node socket failures set a short, safe `code`
+      // (ECONNREFUSED/ENOTFOUND/ETIMEDOUT/ESOCKET/...); `message` on those
+      // same errors embeds the SMTP host:port and is rarely long enough for
+      // MAX_ERROR_MESSAGE_LENGTH truncation to remove it. An empty result
+      // must not collapse to '', which is falsy and would let the
+      // send-attempt gate miss it on redelivery.
+      const code = (error as { code?: string })?.code;
+      const message = code ?? (error instanceof Error ? error.message : '');
       const safeMessage = (message || 'Unknown email send failure').slice(
         0,
         MAX_ERROR_MESSAGE_LENGTH,

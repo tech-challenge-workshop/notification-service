@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { NotificationDeliveryService } from './application/notification-delivery.service';
 import { DELIVERY_REPOSITORY } from './domain/delivery-repository.token';
@@ -36,16 +36,26 @@ const dataSourceProvider = {
   },
 };
 
+const logger = new Logger('NotificationsModule');
+
 /**
  * With no SMTP host configured the service runs on the in-memory sender,
- * mirroring the database's fallback above. Not yet consumed by anything.
+ * mirroring the database's fallback above. Unlike that fallback, this one
+ * looks like success (send() always resolves), so a missing SMTP_HOST in a
+ * real deployment would silently mark emails as sent when none went out —
+ * warn loudly so it's caught at boot, not discovered by an angry user.
  */
-const emailSenderProvider = {
+export const emailSenderProvider = {
   provide: EMAIL_SENDER,
-  useFactory: () =>
-    isSmtpConfigured()
-      ? new SmtpEmailSender(buildSmtpOptions())
-      : new InMemoryEmailSender(),
+  useFactory: () => {
+    if (isSmtpConfigured()) {
+      return new SmtpEmailSender(buildSmtpOptions());
+    }
+    logger.warn(
+      'SMTP_HOST is not configured; falling back to InMemoryEmailSender. No real email will be sent.',
+    );
+    return new InMemoryEmailSender();
+  },
 };
 
 @Module({

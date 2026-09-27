@@ -108,7 +108,9 @@ describe('InMemoryDeliveryRepository', () => {
       record.recordedAt = new Date();
       await repository.save(record);
 
-      await repository.updateEmailOutcome('evt-2', { emailError: 'SMTP timeout' });
+      await repository.updateEmailOutcome('evt-2', {
+        emailError: 'SMTP timeout',
+      });
 
       const found = await repository.findByEventId('evt-2');
       expect(found?.emailError).toBe('SMTP timeout');

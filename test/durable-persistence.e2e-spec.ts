@@ -19,7 +19,10 @@ describeIfDatabase('durable delivery record', () => {
     await dataSource.initialize();
     await dataSource.runMigrations();
     repository = new TypeOrmDeliveryRepository(dataSource);
-    service = new NotificationDeliveryService(repository, new InMemoryEmailSender());
+    service = new NotificationDeliveryService(
+      repository,
+      new InMemoryEmailSender(),
+    );
   }, 30_000);
 
   afterAll(async () => {

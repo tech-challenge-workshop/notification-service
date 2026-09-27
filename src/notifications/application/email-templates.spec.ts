@@ -11,7 +11,7 @@ describe('email templates', () => {
   });
 
   it('renders the failed template with only the safe failureReason and the request id', () => {
-    const { subject, text } = renderFailedEmail({
+    const { text } = renderFailedEmail({
       processingRequestId: 'req-123',
       failureReason: 'O arquivo enviado nao e um video MP4 ou MOV valido.',
     });

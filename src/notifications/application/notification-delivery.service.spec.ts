@@ -292,6 +292,21 @@ describe('NotificationDeliveryService', () => {
 
       expect(emailSender.sent).toHaveLength(0); // already-failed attempt is not retried
     });
+
+    it('falls back to a safe message when the send rejects with an empty error message, and still does not retry', async () => {
+      emailSender.send = () => Promise.reject(new Error(''));
+
+      const result = await service.recordDelivery(validCompletedEvent());
+      expect(result.emailError).toBe('Unknown email send failure');
+
+      emailSender.send = (m) => {
+        emailSender.sent.push(m);
+        return Promise.resolve();
+      };
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(0); // an empty message must not be treated as "no outcome"
+    });
   });
 
   describe('outcome retention', () => {

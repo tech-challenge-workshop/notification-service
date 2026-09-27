@@ -85,6 +85,13 @@ export class NotificationDeliveryService {
         record.failureReason = failureReason;
         record.recordedAt = new Date();
         record = await this.deliveryRepository.save(record);
+
+        // save() can hand back an existing row when a concurrent insert
+        // already won the race (unique-violation fallback). That row may
+        // already carry a completed attempt.
+        if (record.emailSentAt || record.emailError) {
+          return record;
+        }
       }
 
       await this.attemptEmail(record, ownerEmail);
@@ -107,28 +114,38 @@ export class NotificationDeliveryService {
   ): Promise<void> {
     const template =
       record.status === 'COMPLETED'
-        ? renderCompletedEmail({ processingRequestId: record.processingRequestId })
+        ? renderCompletedEmail({
+            processingRequestId: record.processingRequestId,
+          })
         : renderFailedEmail({
             processingRequestId: record.processingRequestId,
             failureReason: record.failureReason ?? '',
           });
 
+    // The send is attempted in isolation from persisting its outcome: if the
+    // send succeeds and the subsequent write fails, the catch below must not
+    // run (it would record a failure for an email that was actually
+    // delivered, and a second failed write from there would leave the row
+    // with no outcome at all, inviting a duplicate send on redelivery).
+    let outcome: { emailSentAt: Date } | { emailError: string };
     try {
       await this.emailSender.send({ to: ownerEmail, ...template });
-      record.emailSentAt = new Date();
-      await this.deliveryRepository.updateEmailOutcome(record.eventId, {
-        emailSentAt: record.emailSentAt,
-      });
+      outcome = { emailSentAt: new Date() };
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unknown email send failure';
-      record.emailError = message.slice(0, MAX_ERROR_MESSAGE_LENGTH);
-      this.logger.warn(
-        `Email send failed for event ${record.eventId}: ${record.emailError}`,
+      // An empty message must not collapse to '', which is falsy and would
+      // let the send-attempt gate miss it on redelivery.
+      const message = error instanceof Error ? error.message : '';
+      const safeMessage = (message || 'Unknown email send failure').slice(
+        0,
+        MAX_ERROR_MESSAGE_LENGTH,
       );
-      await this.deliveryRepository.updateEmailOutcome(record.eventId, {
-        emailError: record.emailError,
-      });
+      this.logger.warn(
+        `Email send failed for event ${record.eventId}: ${safeMessage}`,
+      );
+      outcome = { emailError: safeMessage };
     }
+
+    Object.assign(record, outcome);
+    await this.deliveryRepository.updateEmailOutcome(record.eventId, outcome);
   }
 }

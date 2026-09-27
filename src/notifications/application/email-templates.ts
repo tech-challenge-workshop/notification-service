@@ -1,6 +1,7 @@
-export function renderCompletedEmail(input: {
-  processingRequestId: string;
-}): { subject: string; text: string } {
+export function renderCompletedEmail(input: { processingRequestId: string }): {
+  subject: string;
+  text: string;
+} {
   return {
     subject: `Seu video foi processado (${input.processingRequestId})`,
     text:

@@ -146,4 +146,17 @@ describeIfDatabase('durable delivery record', () => {
   it('applies the migrations with nothing left pending', async () => {
     await expect(dataSource.showMigrations()).resolves.toBe(false);
   });
+
+  it('persists and reads back an email outcome across a fresh connection', async () => {
+    const event = completedEvent();
+    await service.recordDelivery(event);
+
+    await repository.updateEmailOutcome(event.eventId, {
+      emailSentAt: new Date('2026-09-26T12:00:00Z'),
+    });
+
+    const reread = new TypeOrmDeliveryRepository(dataSource);
+    const found = await reread.findByEventId(event.eventId);
+    expect(found?.emailSentAt).toEqual(new Date('2026-09-26T12:00:00Z'));
+  });
 });

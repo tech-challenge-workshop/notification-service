@@ -78,4 +78,41 @@ describe('InMemoryDeliveryRepository', () => {
       expect(found?.processingRequestId).toBe('req-1');
     });
   });
+
+  describe('updateEmailOutcome', () => {
+    it('records a successful send outcome against an existing row', async () => {
+      const record = new DeliveryRecord();
+      record.eventId = 'evt-1';
+      record.processingRequestId = 'req-1';
+      record.ownerUserId = 'user-1';
+      record.status = 'COMPLETED';
+      record.zipStorageKey = 'zip-1';
+      record.recordedAt = new Date();
+      await repository.save(record);
+
+      const sentAt = new Date();
+      await repository.updateEmailOutcome('evt-1', { emailSentAt: sentAt });
+
+      const found = await repository.findByEventId('evt-1');
+      expect(found?.emailSentAt).toBe(sentAt);
+      expect(found?.emailError).toBeUndefined();
+    });
+
+    it('records a failed send outcome against an existing row', async () => {
+      const record = new DeliveryRecord();
+      record.eventId = 'evt-2';
+      record.processingRequestId = 'req-2';
+      record.ownerUserId = 'user-1';
+      record.status = 'FAILED';
+      record.failureReason = 'x';
+      record.recordedAt = new Date();
+      await repository.save(record);
+
+      await repository.updateEmailOutcome('evt-2', { emailError: 'SMTP timeout' });
+
+      const found = await repository.findByEventId('evt-2');
+      expect(found?.emailError).toBe('SMTP timeout');
+      expect(found?.emailSentAt).toBeUndefined();
+    });
+  });
 });

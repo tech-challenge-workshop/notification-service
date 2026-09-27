@@ -30,6 +30,24 @@ class StubDeliveryRepository implements DeliveryRepository {
     this.records.set(record.eventId, record);
     return Promise.resolve(record);
   }
+
+  updateEmailOutcome(
+    eventId: string,
+    outcome: { emailSentAt: Date } | { emailError: string },
+  ): Promise<void> {
+    const record = this.records.get(eventId);
+    if (!record) {
+      return Promise.resolve();
+    }
+    if ('emailSentAt' in outcome) {
+      record.emailSentAt = outcome.emailSentAt;
+      record.emailError = undefined;
+    } else {
+      record.emailError = outcome.emailError;
+      record.emailSentAt = undefined;
+    }
+    return Promise.resolve();
+  }
 }
 
 describe('NotificationDeliveryService', () => {

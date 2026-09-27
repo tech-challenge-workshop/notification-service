@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 2,
+  "next_id": 3,
   "lessons": [
     {
       "id": "L-001",
@@ -22,6 +22,24 @@
       ],
       "created": "2026-09-26T19:10:18Z",
       "last_seen": "2026-09-26T19:10:18Z"
+    },
+    {
+      "id": "L-002",
+      "key": "surviving_mutant::every validation clause needs its own rejecting input a clause no test isolates can be deleted with the suite green",
+      "text": "Every validation clause needs its own rejecting input; a clause no test isolates can be deleted with the suite green.",
+      "signal": "surviving_mutant",
+      "scope": "messaging",
+      "status": "candidate",
+      "features": [
+        "service-robustness"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "src/notifications/infrastructure/messaging/terminal-event.consumer.ts:85 (messaging)"
+      ],
+      "created": "2026-09-27T01:07:35Z",
+      "last_seen": "2026-09-27T01:07:35Z"
     }
   ]
 }

@@ -30,13 +30,13 @@ export function retryBackoffMs(): number {
 
 /**
  * A failure no retry can fix: the message itself is wrong. An invalid
- * terminal event, or a body that is not JSON, fails identically on every
- * delivery.
+ * terminal event, including a body that is not JSON (the consumer reports its
+ * own parse failure as `MALFORMED_JSON`), fails identically on every
+ * delivery. A bare `SyntaxError` is not permanent: it may come from the
+ * delivery itself, where a retry can succeed (ROB-05).
  */
 export function isPermanentFailure(error: unknown): boolean {
-  return (
-    error instanceof InvalidTerminalEventError || error instanceof SyntaxError
-  );
+  return error instanceof InvalidTerminalEventError;
 }
 
 interface NackingChannel {

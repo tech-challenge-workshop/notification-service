@@ -71,14 +71,21 @@ describe('isPermanentFailure', () => {
     ).toBe(true);
   });
 
-  it('treats a body that is not JSON as permanent', () => {
-    expect(isPermanentFailure(parseError())).toBe(true);
+  it('treats a body that is not JSON, as the consumer reports it, as permanent', () => {
+    expect(
+      isPermanentFailure(
+        new InvalidTerminalEventError('Body is not JSON', 'MALFORMED_JSON'),
+      ),
+    ).toBe(true);
   });
 
+  // ROB-05: a bare SyntaxError says nothing about the message - it may come
+  // from the delivery itself, where a retry can succeed.
   it.each([
     ['a persistence fault', new DeliveryPersistenceError('db down')],
     ['an unexpected error', new Error('boom')],
     ['a TypeError', new TypeError('x is undefined')],
+    ['a bare SyntaxError', parseError()],
   ])('treats %s as transient', (_label, error) => {
     expect(isPermanentFailure(error)).toBe(false);
   });
@@ -128,7 +135,10 @@ describe('settleFailedMessage', () => {
       'an invalid terminal event',
       new InvalidTerminalEventError('bad', 'MISSING_FAILURE_REASON'),
     ],
-    ['a body that is not JSON', parseError()],
+    [
+      'a body that is not JSON',
+      new InvalidTerminalEventError('Body is not JSON', 'MALFORMED_JSON'),
+    ],
   ])(
     'dead-letters %s at once, without advancing the clock',
     async (_label, error) => {

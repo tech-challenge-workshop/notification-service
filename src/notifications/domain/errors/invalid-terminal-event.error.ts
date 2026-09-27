@@ -10,6 +10,8 @@ export type InvalidTerminalEventCode =
   | 'MISSING_ZIP_STORAGE_KEY'
   | 'MISSING_FAILURE_REASON'
   | 'AMBIGUOUS_TERMINAL_OUTCOME'
+  | 'MALFORMED_JSON'
+  | 'INVALID_PAYLOAD'
   | 'INVALID_TERMINAL_EVENT';
 
 export class InvalidTerminalEventError extends Error {

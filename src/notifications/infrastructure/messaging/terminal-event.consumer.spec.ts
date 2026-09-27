@@ -159,6 +159,58 @@ describe('TerminalEventConsumer', () => {
       expect(channel.nack).toHaveBeenCalledWith(message, false, false);
     });
 
+    // ROB-04 (V48): a payload the consumer cannot act on is dead-lettered on
+    // its first delivery. `null` and a missing `data` used to throw from the
+    // catch itself, so the message was never settled.
+    it.each([
+      ['null', { pattern: 'terminal.event', data: null }, null],
+      ['missing', { pattern: 'terminal.event' }, undefined],
+      ['an array', { pattern: 'terminal.event', data: [] }, []],
+      ['a string', { pattern: 'terminal.event', data: 'x' }, 'x'],
+      ['a number', { pattern: 'terminal.event', data: 1 }, 1],
+      ['an empty object', { pattern: 'terminal.event', data: {} }, {}],
+    ])(
+      'dead-letters a payload that is %s at once, recording nothing',
+      async (_label, body, payload) => {
+        const logged = jest.spyOn(Logger.prototype, 'error');
+        message.content = Buffer.from(JSON.stringify(body));
+
+        // No clock is advanced: a nack that waited for the backoff would not
+        // have happened yet.
+        await expect(
+          consumer.handleTerminalEvent(
+            payload as unknown as TerminalEventDto,
+            context,
+          ),
+        ).resolves.toBeUndefined();
+
+        expect(recordDeliveryMock).not.toHaveBeenCalled();
+        expect(channel.ack).not.toHaveBeenCalled();
+        expect(channel.nack).toHaveBeenCalledTimes(1);
+        expect(channel.nack).toHaveBeenCalledWith(message, false, false);
+        expect(String(logged.mock.calls[0]?.[0])).toContain('unknown');
+      },
+    );
+
+    // ROB-05: only the parse of the body is a malformed message. A
+    // SyntaxError raised while delivering is a fault a retry can clear.
+    it('requeues a SyntaxError thrown by the delivery only after the 1000 ms backoff', async () => {
+      recordDeliveryMock.mockRejectedValue(new SyntaxError('x'));
+
+      const handled = consumer.handleTerminalEvent(
+        validCompletedEvent(),
+        context,
+      );
+      await jest.advanceTimersByTimeAsync(999);
+      expect(channel.nack).not.toHaveBeenCalled();
+
+      await jest.advanceTimersByTimeAsync(1);
+      await handled;
+      expect(channel.ack).not.toHaveBeenCalled();
+      expect(channel.nack).toHaveBeenCalledTimes(1);
+      expect(channel.nack).toHaveBeenCalledWith(message, false, true);
+    });
+
     it('dead-letters an invalid event at once', async () => {
       recordDeliveryMock.mockRejectedValue(
         new InvalidTerminalEventError(

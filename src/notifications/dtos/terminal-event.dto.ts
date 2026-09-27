@@ -2,6 +2,7 @@ export class TerminalEventDto {
   eventId: string;
   processingRequestId: string;
   ownerUserId: string;
+  ownerEmail: string;
   status: 'COMPLETED' | 'FAILED';
   zipStorageKey?: string;
   failureReason?: string;

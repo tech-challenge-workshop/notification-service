@@ -80,6 +80,7 @@ describe('Local integration (e2e)', () => {
       eventId: 'evt-integration-1',
       processingRequestId: 'req-integration-1',
       ownerUserId: 'user-integration-1',
+      ownerEmail: 'owner-integration-1@example.com',
       status: 'COMPLETED',
       zipStorageKey: 'zip-integration-1',
       occurredAt: '2026-08-27T00:00:00Z',
@@ -122,6 +123,7 @@ describe('Local integration (e2e)', () => {
       eventId: 'evt-integration-failed',
       processingRequestId: 'req-integration-failed',
       ownerUserId: 'user-integration-1',
+      ownerEmail: 'owner-integration-1@example.com',
       status: 'FAILED',
       failureReason: 'O video excede a duracao maxima de 10 minutos.',
       occurredAt: '2026-09-20T00:00:00Z',
@@ -147,6 +149,7 @@ describe('Local integration (e2e)', () => {
       eventId: 'evt-integration-invalid',
       processingRequestId: 'req-integration-invalid',
       ownerUserId: 'user-integration-1',
+      ownerEmail: 'owner-integration-1@example.com',
       status: 'FAILED',
       occurredAt: '2026-09-20T00:00:00Z',
     };

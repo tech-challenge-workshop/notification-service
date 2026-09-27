@@ -28,6 +28,14 @@ export class NotificationDeliveryService {
       );
     }
 
+    const ownerEmail = event.ownerEmail?.trim();
+    if (!ownerEmail) {
+      throw new InvalidTerminalEventError(
+        'Missing ownerEmail',
+        'MISSING_OWNER_EMAIL',
+      );
+    }
+
     // A present-but-empty value carries nothing a notification could render,
     // so it is treated as absent.
     const zipStorageKey = event.zipStorageKey?.trim() || undefined;

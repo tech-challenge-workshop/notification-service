@@ -45,6 +45,7 @@ describe('NotificationDeliveryService', () => {
     eventId: 'evt-1',
     processingRequestId: 'req-1',
     ownerUserId: 'user-1',
+    ownerEmail: 'owner@example.com',
     status: 'COMPLETED',
     zipStorageKey: 'zip-1',
     occurredAt: '2026-08-27T00:00:00Z',
@@ -168,6 +169,20 @@ describe('NotificationDeliveryService', () => {
           failureReason: '   ',
         }),
       ).rejects.toMatchObject({ code: 'MISSING_FAILURE_REASON' });
+    });
+
+    it('rejects an event with no ownerEmail and records nothing', async () => {
+      await expect(
+        service.recordDelivery({ ...validCompletedEvent(), ownerEmail: '' }),
+      ).rejects.toMatchObject({ code: 'MISSING_OWNER_EMAIL' });
+
+      await expect(repository.findByEventId('evt-1')).resolves.toBeUndefined();
+    });
+
+    it('treats a whitespace-only ownerEmail as absent', async () => {
+      await expect(
+        service.recordDelivery({ ...validCompletedEvent(), ownerEmail: '   ' }),
+      ).rejects.toMatchObject({ code: 'MISSING_OWNER_EMAIL' });
     });
 
     it('validates before deduplication, so an invalid event is never served from a prior record', async () => {

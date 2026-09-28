@@ -24,6 +24,8 @@ function toDomain(row: DeliveryRecordEntity): DeliveryRecord {
   record.zipStorageKey = row.zipStorageKey ?? undefined;
   record.failureReason = row.failureReason ?? undefined;
   record.recordedAt = row.recordedAt;
+  record.emailSentAt = row.emailSentAt ?? undefined;
+  record.emailError = row.emailError ?? undefined;
   return record;
 }
 
@@ -56,6 +58,8 @@ export class TypeOrmDeliveryRepository implements DeliveryRepository {
         zipStorageKey: record.zipStorageKey ?? null,
         failureReason: record.failureReason ?? null,
         recordedAt: record.recordedAt,
+        emailSentAt: null,
+        emailError: null,
       });
       return record;
     } catch (error) {
@@ -70,5 +74,18 @@ export class TypeOrmDeliveryRepository implements DeliveryRepository {
       }
       throw error;
     }
+  }
+
+  async updateEmailOutcome(
+    eventId: string,
+    outcome: { emailSentAt: Date } | { emailError: string },
+  ): Promise<void> {
+    await this.dataSource.manager.update(
+      DeliveryRecordEntity,
+      { eventId },
+      'emailSentAt' in outcome
+        ? { emailSentAt: outcome.emailSentAt, emailError: null }
+        : { emailError: outcome.emailError, emailSentAt: null },
+    );
   }
 }

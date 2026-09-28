@@ -3,6 +3,7 @@ import { DeliveryRepository } from '../domain/delivery.repository';
 import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
+import { InMemoryEmailSender } from '../infrastructure/email/in-memory-email-sender';
 import { NotificationDeliveryService } from './notification-delivery.service';
 
 class StubDeliveryRepository implements DeliveryRepository {
@@ -30,21 +31,42 @@ class StubDeliveryRepository implements DeliveryRepository {
     this.records.set(record.eventId, record);
     return Promise.resolve(record);
   }
+
+  updateEmailOutcome(
+    eventId: string,
+    outcome: { emailSentAt: Date } | { emailError: string },
+  ): Promise<void> {
+    const record = this.records.get(eventId);
+    if (!record) {
+      return Promise.resolve();
+    }
+    if ('emailSentAt' in outcome) {
+      record.emailSentAt = outcome.emailSentAt;
+      record.emailError = undefined;
+    } else {
+      record.emailError = outcome.emailError;
+      record.emailSentAt = undefined;
+    }
+    return Promise.resolve();
+  }
 }
 
 describe('NotificationDeliveryService', () => {
   let service: NotificationDeliveryService;
   let repository: StubDeliveryRepository;
+  let emailSender: InMemoryEmailSender;
 
   beforeEach(() => {
     repository = new StubDeliveryRepository();
-    service = new NotificationDeliveryService(repository);
+    emailSender = new InMemoryEmailSender();
+    service = new NotificationDeliveryService(repository, emailSender);
   });
 
   const validCompletedEvent = (): TerminalEventDto => ({
     eventId: 'evt-1',
     processingRequestId: 'req-1',
     ownerUserId: 'user-1',
+    ownerEmail: 'owner@example.com',
     status: 'COMPLETED',
     zipStorageKey: 'zip-1',
     occurredAt: '2026-08-27T00:00:00Z',
@@ -170,6 +192,20 @@ describe('NotificationDeliveryService', () => {
       ).rejects.toMatchObject({ code: 'MISSING_FAILURE_REASON' });
     });
 
+    it('rejects an event with no ownerEmail and records nothing', async () => {
+      await expect(
+        service.recordDelivery({ ...validCompletedEvent(), ownerEmail: '' }),
+      ).rejects.toMatchObject({ code: 'MISSING_OWNER_EMAIL' });
+
+      await expect(repository.findByEventId('evt-1')).resolves.toBeUndefined();
+    });
+
+    it('treats a whitespace-only ownerEmail as absent', async () => {
+      await expect(
+        service.recordDelivery({ ...validCompletedEvent(), ownerEmail: '   ' }),
+      ).rejects.toMatchObject({ code: 'MISSING_OWNER_EMAIL' });
+    });
+
     it('validates before deduplication, so an invalid event is never served from a prior record', async () => {
       // A valid event is recorded under this eventId first.
       await service.recordDelivery(validCompletedEvent());
@@ -182,6 +218,98 @@ describe('NotificationDeliveryService', () => {
           zipStorageKey: undefined,
         }),
       ).rejects.toMatchObject({ code: 'MISSING_ZIP_STORAGE_KEY' });
+    });
+  });
+
+  describe('email sending', () => {
+    it('sends the completed template exactly once for a new event', async () => {
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(1);
+      expect(emailSender.sent[0].to).toBe('owner@example.com');
+      expect(emailSender.sent[0].text).toContain('req-1');
+    });
+
+    it('sends the failed template with only the safe failureReason', async () => {
+      const event: TerminalEventDto = {
+        ...validCompletedEvent(),
+        status: 'FAILED',
+        zipStorageKey: undefined,
+        failureReason: 'Nao foi possivel processar o video.',
+      };
+
+      await service.recordDelivery(event);
+
+      expect(emailSender.sent).toHaveLength(1);
+      expect(emailSender.sent[0].text).toContain(
+        'Nao foi possivel processar o video.',
+      );
+    });
+
+    it('does not send a second email when the same eventId is redelivered after a completed attempt', async () => {
+      await service.recordDelivery(validCompletedEvent());
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(1);
+    });
+
+    it('still sends exactly one email when a redelivered eventId finds a row with no prior outcome (crash recovery)', async () => {
+      // Simulates a crash between save() and send(): the record exists, but
+      // neither emailSentAt nor emailError has ever been set on it.
+      const record = new DeliveryRecord();
+      Object.assign(record, {
+        eventId: 'evt-1',
+        processingRequestId: 'req-1',
+        ownerUserId: 'user-1',
+        status: 'COMPLETED',
+        zipStorageKey: 'zip-1',
+        recordedAt: new Date(),
+      });
+      await repository.save(record);
+
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(1);
+    });
+
+    it('records emailError as a safe code, never the raw connection string, for a realistic nodemailer failure', async () => {
+      // Shaped exactly like a real nodemailer/Node socket failure: a short
+      // message (well under the 200-char truncation boundary) that still
+      // carries the SMTP host:port, plus the `code` property those errors
+      // actually set. A short message alone would slip through untouched.
+      const transportError = Object.assign(
+        new Error('connect ECONNREFUSED 127.0.0.1:1'),
+        { code: 'ECONNREFUSED' },
+      );
+      emailSender.send = () => Promise.reject(transportError);
+
+      const result = await service.recordDelivery(validCompletedEvent());
+      expect(result.emailError).toBe('ECONNREFUSED');
+      expect(result.emailError).not.toMatch(/\d+\.\d+\.\d+\.\d+/); // no host/IP
+      expect(result.emailError).not.toMatch(/:\d+/); // no port
+
+      emailSender.send = (m) => {
+        emailSender.sent.push(m);
+        return Promise.resolve();
+      };
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(0); // already-failed attempt is not retried
+    });
+
+    it('falls back to a safe message when the send rejects with an empty error message, and still does not retry', async () => {
+      emailSender.send = () => Promise.reject(new Error(''));
+
+      const result = await service.recordDelivery(validCompletedEvent());
+      expect(result.emailError).toBe('Unknown email send failure');
+
+      emailSender.send = (m) => {
+        emailSender.sent.push(m);
+        return Promise.resolve();
+      };
+      await service.recordDelivery(validCompletedEvent());
+
+      expect(emailSender.sent).toHaveLength(0); // an empty message must not be treated as "no outcome"
     });
   });
 

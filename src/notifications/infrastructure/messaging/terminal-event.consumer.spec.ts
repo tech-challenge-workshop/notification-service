@@ -39,6 +39,7 @@ describe('TerminalEventConsumer', () => {
     eventId: 'evt-1',
     processingRequestId: 'req-1',
     ownerUserId: 'user-1',
+    ownerEmail: 'owner@example.com',
     status: 'COMPLETED',
     zipStorageKey: 'zip-1',
     occurredAt: '2026-08-27T00:00:00Z',
@@ -62,6 +63,7 @@ describe('TerminalEventConsumer', () => {
         eventId: 'evt-1',
         processingRequestId: 'req-1',
         ownerUserId: 'user-1',
+        ownerEmail: 'owner@example.com',
         status: 'COMPLETED',
         recordedAt: new Date(),
       };
@@ -295,6 +297,7 @@ describe('TerminalEventConsumer', () => {
       eventId: 'evt-policy',
       processingRequestId: 'req-policy',
       ownerUserId: 'user-policy',
+      ownerEmail: 'owner@example.com',
       status: 'COMPLETED',
       zipStorageKey: 'zips/a.zip',
       occurredAt: '2026-09-20T00:00:00Z',

@@ -6,4 +6,8 @@ export interface DeliveryRepository {
     processingRequestId: string,
   ): Promise<DeliveryRecord | undefined>;
   save(record: DeliveryRecord): Promise<DeliveryRecord>;
+  updateEmailOutcome(
+    eventId: string,
+    outcome: { emailSentAt: Date } | { emailError: string },
+  ): Promise<void>;
 }

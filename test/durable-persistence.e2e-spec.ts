@@ -4,6 +4,7 @@ import { DeliveryRecord } from '../src/notifications/domain/delivery-record';
 import { createDataSource } from '../src/notifications/infrastructure/persistence/data-source';
 import { TypeOrmDeliveryRepository } from '../src/notifications/infrastructure/persistence/typeorm-delivery.repository';
 import { NotificationDeliveryService } from '../src/notifications/application/notification-delivery.service';
+import { InMemoryEmailSender } from '../src/notifications/infrastructure/email/in-memory-email-sender';
 import { TerminalEventDto } from '../src/notifications/dtos/terminal-event.dto';
 
 const describeIfDatabase = process.env.DATABASE_HOST ? describe : describe.skip;
@@ -18,7 +19,10 @@ describeIfDatabase('durable delivery record', () => {
     await dataSource.initialize();
     await dataSource.runMigrations();
     repository = new TypeOrmDeliveryRepository(dataSource);
-    service = new NotificationDeliveryService(repository);
+    service = new NotificationDeliveryService(
+      repository,
+      new InMemoryEmailSender(),
+    );
   }, 30_000);
 
   afterAll(async () => {
@@ -29,6 +33,7 @@ describeIfDatabase('durable delivery record', () => {
     eventId: randomUUID(),
     processingRequestId: randomUUID(),
     ownerUserId: 'user-' + randomUUID(),
+    ownerEmail: 'owner@example.com',
     status: 'COMPLETED',
     zipStorageKey: 'zips/output.zip',
     occurredAt: new Date().toISOString(),
@@ -38,6 +43,7 @@ describeIfDatabase('durable delivery record', () => {
     eventId: randomUUID(),
     processingRequestId: randomUUID(),
     ownerUserId: 'user-' + randomUUID(),
+    ownerEmail: 'owner@example.com',
     status: 'FAILED',
     failureReason: 'O video excede a duracao maxima de 10 minutos.',
     occurredAt: new Date().toISOString(),
@@ -143,5 +149,18 @@ describeIfDatabase('durable delivery record', () => {
 
   it('applies the migrations with nothing left pending', async () => {
     await expect(dataSource.showMigrations()).resolves.toBe(false);
+  });
+
+  it('persists and reads back an email outcome across a fresh connection', async () => {
+    const event = completedEvent();
+    await service.recordDelivery(event);
+
+    await repository.updateEmailOutcome(event.eventId, {
+      emailSentAt: new Date('2026-09-26T12:00:00Z'),
+    });
+
+    const reread = new TypeOrmDeliveryRepository(dataSource);
+    const found = await reread.findByEventId(event.eventId);
+    expect(found?.emailSentAt).toEqual(new Date('2026-09-26T12:00:00Z'));
   });
 });

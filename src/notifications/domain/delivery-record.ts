@@ -8,4 +8,8 @@ export class DeliveryRecord {
   /** Present when the request failed. Already safe for a user to read. */
   failureReason?: string;
   recordedAt: Date;
+  /** Set once an email attempt completes, successfully. */
+  emailSentAt?: Date;
+  /** Set once an email attempt completes, unsuccessfully. Mutually exclusive with emailSentAt. */
+  emailError?: string;
 }

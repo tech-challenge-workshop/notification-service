@@ -33,4 +33,10 @@ export class DeliveryRecordEntity {
 
   @Column({ name: 'recorded_at', type: 'timestamptz' })
   recordedAt: Date;
+
+  @Column({ name: 'email_sent_at', type: 'timestamptz', nullable: true })
+  emailSentAt: Date | null;
+
+  @Column({ name: 'email_error', type: 'text', nullable: true })
+  emailError: string | null;
 }

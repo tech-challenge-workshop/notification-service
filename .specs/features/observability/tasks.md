@@ -246,9 +246,9 @@ T11
 
 **Done when**:
 
-- [ ] Unit: exposition contains both families with bounded labels after traffic
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: 3 new unit tests pass (no silent deletions)
+- [x] Unit: exposition contains both families with bounded labels after traffic
+- [x] Gate check passes: `npm test` (Phase 2 Build gate also green: lint, typecheck, 145 unit, 17 e2e, build)
+- [x] Test count: 3 new unit tests pass (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

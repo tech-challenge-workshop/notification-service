@@ -129,8 +129,8 @@ T11
 
 **Done when**:
 
-- [ ] Gate check passes: `npm run lint && npm run typecheck && npm run build`
-- [ ] Test count: no new tests (wiring layer - matrix; e2e in T11)
+- [x] Gate check passes: `npm run lint && npm run typecheck && npm run build`
+- [x] Test count: no new tests (wiring layer - matrix; e2e in T11)
 
 **Tests**: none
 **Gate**: build

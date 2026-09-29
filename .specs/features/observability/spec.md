@@ -113,8 +113,8 @@ The Notification service is the end of the correlation chain and the source of t
 | OBS-51 | P2: Metrics (exactly-once outcome) | T7, T11 | In progress |
 | OBS-52 | P2: Metrics (redelivery no double-count) | T7, T11 | In progress |
 | OBS-53 | P2: Metrics (failure path) | T7, T11 | In progress |
-| OBS-54 | P2: Health (not-ready on dependency loss) | T9, T11 | Pending |
-| OBS-55 | P2: Health/Metrics (no auth, no noise) | T8, T9, T10, T11 | Pending |
+| OBS-54 | P2: Health (not-ready on dependency loss) | T9, T11 | In progress |
+| OBS-55 | P2: Health/Metrics (no auth, no noise) | T8, T9, T10, T11 | In progress |
 
 **ID format:** `OBS-[NUMBER]` — `fiap-x-api` owns OBS-01..15; `processing-catalog` OBS-16..30; `processing-worker` OBS-31..45; this repo owns OBS-46..60; `fiap-x-platform` OBS-61..75.
 

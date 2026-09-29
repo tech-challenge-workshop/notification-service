@@ -269,9 +269,11 @@ T11
 
 **Done when**:
 
-- [ ] Unit: indicator mocks flip the status code (not just the body); liveness stays 200
-- [ ] Gate check passes: `npm test && npm run test:e2e`
-- [ ] Test count: 5 new unit tests pass (no silent deletions)
+- [x] Unit: indicator mocks flip the status code (not just the body); liveness stays 200
+- [x] Gate check passes: `npm test && npm run test:e2e`
+- [x] Test count: 5 unit tests pass (no silent deletions): the 3 pre-S8 cases that asserted the always-200 `{status:'ok', ready}` body are rewritten to the OBS-54 contract (same scenarios, now HTTP 200/503 over supertest), plus 2 new (both down; liveness)
+
+> Note: the readiness body mirrors the catalog's (`{status, rabbitmq: 'up'|'down', database: 'up'|'down'}`); the old `ready` flag is dropped. Nothing in the repo or `fiap-x-platform/compose.yaml` reads it.
 
 **Tests**: unit
 **Gate**: full

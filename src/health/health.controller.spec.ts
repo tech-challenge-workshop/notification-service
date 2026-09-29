@@ -1,68 +1,111 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import { App } from 'supertest/types';
 import { HealthController } from './health.controller';
 import { RabbitMqHealthIndicator } from './rabbitmq-health.indicator';
 import { DatabaseHealthIndicator } from './database.health-indicator';
 
+// OBS-54: readiness maps dependency state to the HTTP status, not a body
+// flag, so a scraper or `--wait` sees it. OBS-55: liveness never consults a
+// dependency. Asserted over HTTP, because the status code is the contract.
 describe('HealthController', () => {
-  let controller: HealthController;
-  let indicator: { isReady: jest.Mock };
+  let app: INestApplication<App>;
+  let rabbitMq: { isReady: jest.Mock };
+  let database: { isHealthy: jest.Mock };
 
-  beforeEach(async () => {
-    indicator = { isReady: jest.fn() };
-
-    const module: TestingModule = await Test.createTestingModule({
+  const start = async (
+    databaseIndicator: Partial<DatabaseHealthIndicator>,
+  ): Promise<void> => {
+    const moduleRef = await Test.createTestingModule({
       controllers: [HealthController],
       providers: [
-        {
-          provide: RabbitMqHealthIndicator,
-          useValue: indicator,
-        },
-        {
-          // No database configured in this suite, which the indicator reports
-          // as healthy: the service is deliberately running in memory.
-          provide: DatabaseHealthIndicator,
-          useValue: new DatabaseHealthIndicator(undefined),
-        },
+        { provide: RabbitMqHealthIndicator, useValue: rabbitMq },
+        { provide: DatabaseHealthIndicator, useValue: databaseIndicator },
       ],
     }).compile();
+    app = moduleRef.createNestApplication();
+    await app.init();
+  };
 
-    controller = module.get<HealthController>(HealthController);
+  beforeEach(() => {
+    rabbitMq = { isReady: jest.fn() };
+    database = { isHealthy: jest.fn() };
   });
 
-  it('should return ready=true when RabbitMQ is connected', async () => {
-    indicator.isReady.mockReturnValue(true);
-
-    const result = await controller.health();
-
-    expect(result).toEqual({ status: 'ok', ready: true });
-    expect(indicator.isReady).toHaveBeenCalled();
+  afterEach(async () => {
+    await app.close();
   });
 
-  it('should return ready=false when RabbitMQ is unavailable', async () => {
-    indicator.isReady.mockReturnValue(false);
+  it('answers 200 when RabbitMQ is connected and no database is configured (in-memory run)', async () => {
+    rabbitMq.isReady.mockReturnValue(true);
+    await start(new DatabaseHealthIndicator(undefined));
 
-    const result = await controller.health();
+    const response = await request(app.getHttpServer()).get('/health');
 
-    expect(result).toEqual({ status: 'ok', ready: false });
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: 'ok',
+      rabbitmq: 'up',
+      database: 'up',
+    });
   });
 
-  it('reports not ready when the database is unreachable, even with the broker up', async () => {
-    indicator.isReady.mockReturnValue(true);
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [HealthController],
-      providers: [
-        { provide: RabbitMqHealthIndicator, useValue: indicator },
-        {
-          provide: DatabaseHealthIndicator,
-          useValue: { isHealthy: () => Promise.resolve(false) },
-        },
-      ],
-    }).compile();
+  it('answers 503 when RabbitMQ is unavailable', async () => {
+    rabbitMq.isReady.mockReturnValue(false);
+    database.isHealthy.mockResolvedValue(true);
+    await start(database);
 
-    const result = await module
-      .get<HealthController>(HealthController)
-      .health();
+    const response = await request(app.getHttpServer()).get('/health');
 
-    expect(result).toEqual({ status: 'ok', ready: false });
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      status: 'error',
+      rabbitmq: 'down',
+      database: 'up',
+    });
+  });
+
+  it('answers 503 when the database is unreachable, even with the broker up', async () => {
+    rabbitMq.isReady.mockReturnValue(true);
+    database.isHealthy.mockResolvedValue(false);
+    await start(database);
+
+    const response = await request(app.getHttpServer()).get('/health');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      status: 'error',
+      rabbitmq: 'up',
+      database: 'down',
+    });
+  });
+
+  it('answers 503 naming both when both dependencies are down', async () => {
+    rabbitMq.isReady.mockReturnValue(false);
+    database.isHealthy.mockResolvedValue(false);
+    await start(database);
+
+    const response = await request(app.getHttpServer()).get('/health');
+
+    expect(response.status).toBe(503);
+    expect(response.body).toEqual({
+      status: 'error',
+      rabbitmq: 'down',
+      database: 'down',
+    });
+  });
+
+  it('keeps liveness at 200 while both dependencies are down, consulting neither', async () => {
+    rabbitMq.isReady.mockReturnValue(false);
+    database.isHealthy.mockResolvedValue(false);
+    await start(database);
+
+    const response = await request(app.getHttpServer()).get('/health/live');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ok' });
+    expect(rabbitMq.isReady).not.toHaveBeenCalled();
+    expect(database.isHealthy).not.toHaveBeenCalled();
   });
 });

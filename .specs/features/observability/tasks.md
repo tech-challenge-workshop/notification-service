@@ -275,6 +275,8 @@ T11
 
 > Follow-up (found by the T11 broker e2e, own commit `fix(notification): ...`): `RabbitMqHealthIndicator` opens its connection in the constructor but attaches the `connect` listener in `onModuleInit`; the DATA_SOURCE factory's `initialize()` + migrations run in between and outlast the broker handshake, so the event was lost and readiness stayed false for the life of the process. Invisible under the old always-200 body; with the honest 503 it would pin the service not-ready. `onModuleInit` now seeds `ready` from `connection.isConnected()` (+1 unit test).
 
+> Follow-up 2 (found by the T11 database-loss e2e, own commit): `HealthModule` never imported `NotificationsModule`, so `DatabaseHealthIndicator`'s `@Optional() DATA_SOURCE` resolved to `undefined` and readiness reported a lost database as healthy in the real composition. `HealthModule` now imports `NotificationsModule` (which exports `DATA_SOURCE`); `src/health/health.module.spec.ts` pins the wiring (+1 unit test).
+
 > Note: the readiness body mirrors the catalog's (`{status, rabbitmq: 'up'|'down', database: 'up'|'down'}`); the old `ready` flag is dropped. Nothing in the repo or `fiap-x-platform/compose.yaml` reads it.
 
 **Tests**: unit

@@ -323,9 +323,15 @@ T11
 
 **Done when**:
 
-- [ ] All assertions pass on the real broker
-- [ ] Gate check passes: `npm test && npm run test:e2e && npm run lint && npm run typecheck && npm run build`
-- [ ] Test count: 9 new e2e tests pass (no silent deletions)
+- [x] All assertions pass on the real broker
+- [x] Gate check passes: `npm test && npm run test:e2e && npm run lint && npm run typecheck && npm run build` (151 unit, 26 e2e, 0 skipped)
+- [x] Test count: 9 new e2e tests pass (no silent deletions)
+
+> Notes:
+> - Spec-precision gap: the P2 independent test reads "one `COMPLETED` and one `FAILED` terminal event -> one `sent` and one `failed`", but `outcome` is the send outcome (OBS-51), and a `FAILED` event normally sends its failure notice (`sent`). The e2e gives the `FAILED` event an unreachable recipient, so it is both a `FAILED` event and a `failed` send; the `COMPLETED` one is `sent`. Both are redelivered after their attempt: counters stay 1/1, duration count 2.
+> - No Mailpit: its SMTP port is not published to the host. Successful sends go to an in-memory sender; failed sends go through the real `SmtpEmailSender` to `127.0.0.1:1`, a genuine nodemailer connection failure (recorded as `ESOCKET`).
+> - "RabbitMQ stopped" is exercised as an unreachable broker URL for the health indicator (the shared broker cannot be stopped from a test); "database down" destroys the live DataSource at runtime. These two runs found the two readiness bugs fixed in the T9 follow-ups.
+> - Log capture uses the catalog's stdout-tamper pattern; LOG_LEVEL=info (trace for the no-address test).
 
 **Tests**: e2e
 **Gate**: full

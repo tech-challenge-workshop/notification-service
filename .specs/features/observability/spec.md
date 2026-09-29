@@ -105,16 +105,16 @@ The Notification service is the end of the correlation chain and the source of t
 
 | Requirement ID | Story | Tasks | Status |
 | --- | --- | --- | --- |
-| OBS-46 | P1: correlationId (consume context) | T1, T4, T5, T6, T11 | In progress |
-| OBS-47 | P1: correlationId (fallback) | T1, T5, T6, T11 | In progress |
-| OBS-48 | P1: structured logs (JSON shape) | T2, T3, T11 | In progress |
-| OBS-49 | P1: structured logs (email redaction) | T2, T11 | In progress |
-| OBS-50 | P2: Metrics (exposition set) | T7, T8, T11 | In progress |
-| OBS-51 | P2: Metrics (exactly-once outcome) | T7, T11 | In progress |
-| OBS-52 | P2: Metrics (redelivery no double-count) | T7, T11 | In progress |
-| OBS-53 | P2: Metrics (failure path) | T7, T11 | In progress |
-| OBS-54 | P2: Health (not-ready on dependency loss) | T9, T11 | In progress |
-| OBS-55 | P2: Health/Metrics (no auth, no noise) | T8, T9, T10, T11 | In progress |
+| OBS-46 | P1: correlationId (consume context) | T1, T4, T5, T6, T11 | Implemented (pending Verifier) |
+| OBS-47 | P1: correlationId (fallback) | T1, T5, T6, T11 | Implemented (pending Verifier) |
+| OBS-48 | P1: structured logs (JSON shape) | T2, T3, T11 | Implemented (pending Verifier) |
+| OBS-49 | P1: structured logs (email redaction) | T2, T11 | Implemented (pending Verifier) |
+| OBS-50 | P2: Metrics (exposition set) | T7, T8, T11 | Implemented (pending Verifier) |
+| OBS-51 | P2: Metrics (exactly-once outcome) | T7, T11 | Implemented (pending Verifier) |
+| OBS-52 | P2: Metrics (redelivery no double-count) | T7, T11 | Implemented (pending Verifier) |
+| OBS-53 | P2: Metrics (failure path) | T7, T11 | Implemented (pending Verifier) |
+| OBS-54 | P2: Health (not-ready on dependency loss) | T9, T11 | Implemented (pending Verifier) |
+| OBS-55 | P2: Health/Metrics (no auth, no noise) | T8, T9, T10, T11 | Implemented (pending Verifier) |
 
 **ID format:** `OBS-[NUMBER]` — `fiap-x-api` owns OBS-01..15; `processing-catalog` OBS-16..30; `processing-worker` OBS-31..45; this repo owns OBS-46..60; `fiap-x-platform` OBS-61..75.
 

@@ -1,9 +1,11 @@
+import { Logger } from '@nestjs/common';
 import { DeliveryRecord } from '../domain/delivery-record';
 import { DeliveryRepository } from '../domain/delivery.repository';
 import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../domain/errors/invalid-terminal-event.error';
 import { TerminalEventDto } from '../dtos/terminal-event.dto';
 import { InMemoryEmailSender } from '../infrastructure/email/in-memory-email-sender';
+import { notificationMetrics } from '../../observability/metrics';
 import { NotificationDeliveryService } from './notification-delivery.service';
 
 class StubDeliveryRepository implements DeliveryRepository {
@@ -297,6 +299,26 @@ describe('NotificationDeliveryService', () => {
       expect(emailSender.sent).toHaveLength(0); // already-failed attempt is not retried
     });
 
+    it('keeps the recipient address out of the log and the record when the send rejects with a code-less error naming it', async () => {
+      // AD-015/OBS-49: a sender error without a `code` whose message embeds
+      // the address. Key-path redaction cannot see text inside a message.
+      const address = validCompletedEvent().ownerEmail;
+      emailSender.send = ({ to }) =>
+        Promise.reject(new Error(`mailbox ${to} unavailable`));
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      try {
+        const record = await service.recordDelivery(validCompletedEvent());
+
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(warn.mock.calls)).not.toContain(address);
+        expect(record.emailError).toBe('Unknown email send failure');
+        expect(record.emailError).not.toContain(address);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
     it('falls back to a safe message when the send rejects with an empty error message, and still does not retry', async () => {
       emailSender.send = () => Promise.reject(new Error(''));
 
@@ -332,6 +354,106 @@ describe('NotificationDeliveryService', () => {
       expect(second.zipStorageKey).toBe(first.zipStorageKey);
       expect(second.failureReason).toBe(first.failureReason);
       expect(second.recordedAt).toEqual(first.recordedAt);
+    });
+  });
+
+  // OBS-51..53: one settled send attempt, one count; a dedup hit is not an
+  // attempt and counts nothing.
+  describe('delivery metrics', () => {
+    const exposition = () => notificationMetrics.metrics();
+    // The histogram exposes no sample until its first observation.
+    const sendCount = (text: string): number =>
+      Number(
+        /fiapx_email_send_duration_seconds_count (\d+)/.exec(text)?.[1] ?? 0,
+      );
+
+    beforeEach(() => {
+      notificationMetrics.resetMetrics();
+    });
+
+    it('counts a successful send once as sent and observes its duration', async () => {
+      emailSender.send = async (m) => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        emailSender.sent.push(m);
+      };
+
+      await service.recordDelivery(validCompletedEvent());
+
+      const text = await exposition();
+      expect(text).toContain('fiapx_email_delivery_total{outcome="sent"} 1');
+      expect(text).toContain('fiapx_email_delivery_total{outcome="failed"} 0');
+      expect(sendCount(text)).toBe(1);
+      const sum = Number(
+        /fiapx_email_send_duration_seconds_sum (\S+)/.exec(text)?.[1],
+      );
+      expect(sum).toBeGreaterThanOrEqual(0.04);
+      expect(sum).toBeLessThan(5);
+    });
+
+    it('counts a throwing send once as failed, observes its duration and records the failure', async () => {
+      emailSender.send = () =>
+        Promise.reject(Object.assign(new Error('x'), { code: 'ECONNREFUSED' }));
+
+      const record = await service.recordDelivery(validCompletedEvent());
+
+      const text = await exposition();
+      expect(text).toContain('fiapx_email_delivery_total{outcome="failed"} 1');
+      expect(text).toContain('fiapx_email_delivery_total{outcome="sent"} 0');
+      expect(sendCount(text)).toBe(1);
+      expect(record.emailError).toBe('ECONNREFUSED');
+      expect(record.emailSentAt).toBeUndefined();
+    });
+
+    it('does not count a redelivery of an already-sent event again', async () => {
+      await service.recordDelivery(validCompletedEvent());
+      await service.recordDelivery(validCompletedEvent());
+
+      const text = await exposition();
+      expect(emailSender.sent).toHaveLength(1);
+      expect(text).toContain('fiapx_email_delivery_total{outcome="sent"} 1');
+      expect(text).toContain('fiapx_email_delivery_total{outcome="failed"} 0');
+      expect(sendCount(text)).toBe(1);
+    });
+
+    it('does not count a redelivery of an already-failed event again', async () => {
+      emailSender.send = () => Promise.reject(new Error('down'));
+      await service.recordDelivery(validCompletedEvent());
+      await service.recordDelivery(validCompletedEvent());
+
+      const text = await exposition();
+      expect(text).toContain('fiapx_email_delivery_total{outcome="failed"} 1');
+      expect(text).toContain('fiapx_email_delivery_total{outcome="sent"} 0');
+      expect(sendCount(text)).toBe(1);
+    });
+
+    it('counts nothing when a concurrent insert already carries a completed attempt', async () => {
+      const winner = new DeliveryRecord();
+      Object.assign(winner, {
+        eventId: 'evt-1',
+        processingRequestId: 'req-1',
+        status: 'COMPLETED',
+        emailSentAt: new Date(),
+      });
+      repository.findByEventId = () => Promise.resolve(undefined);
+      repository.save = () => Promise.resolve(winner);
+
+      await service.recordDelivery(validCompletedEvent());
+
+      const text = await exposition();
+      expect(emailSender.sent).toHaveLength(0);
+      expect(text).toContain('fiapx_email_delivery_total{outcome="sent"} 0');
+      expect(sendCount(text)).toBe(0);
+    });
+
+    it('counts nothing for an event rejected before any send attempt', async () => {
+      await expect(
+        service.recordDelivery({ ...validCompletedEvent(), ownerEmail: '' }),
+      ).rejects.toMatchObject({ code: 'MISSING_OWNER_EMAIL' });
+
+      const text = await exposition();
+      expect(text).toContain('fiapx_email_delivery_total{outcome="sent"} 0');
+      expect(text).toContain('fiapx_email_delivery_total{outcome="failed"} 0');
+      expect(sendCount(text)).toBe(0);
     });
   });
 });

@@ -4,12 +4,18 @@ import { AppService } from './app.service';
 import { HealthModule } from './health/health.module';
 import { LocalDeliveryModule } from './notifications/infrastructure/http/local-delivery.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ObservabilityModule } from './observability/observability.module';
 
 const localModules =
   process.env.LOCAL_INTEGRATION === 'true' ? [LocalDeliveryModule] : [];
 
 @Module({
-  imports: [NotificationsModule, HealthModule, ...localModules],
+  imports: [
+    ObservabilityModule,
+    NotificationsModule,
+    HealthModule,
+    ...localModules,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

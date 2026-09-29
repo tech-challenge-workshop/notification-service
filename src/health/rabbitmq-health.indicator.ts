@@ -33,6 +33,12 @@ export class RabbitMqHealthIndicator implements OnModuleInit, OnModuleDestroy {
       );
       this.ready = false;
     });
+
+    // The connection opened in the constructor; the database factory's
+    // migrations can outlast the broker handshake, so a 'connect' emitted
+    // before the listener above attached would otherwise be lost and
+    // readiness would stay 503 for the life of the process.
+    this.ready = this.connection.isConnected();
   }
 
   onModuleDestroy(): void {

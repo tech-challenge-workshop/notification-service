@@ -1,5 +1,6 @@
 import { Logger } from '@nestjs/common';
 import { RmqContext } from '@nestjs/microservices';
+import { correlationContext } from '../../../observability/correlation-context';
 import { NotificationDeliveryService } from '../../application/notification-delivery.service';
 import { DeliveryPersistenceError } from '../../domain/errors/delivery-persistence.error';
 import { InvalidTerminalEventError } from '../../domain/errors/invalid-terminal-event.error';
@@ -353,6 +354,92 @@ describe('TerminalEventConsumer', () => {
       expect(line).toContain('evt-policy');
       expect(line).toContain('failureReason');
       logged.mockRestore();
+    });
+  });
+
+  // OBS-46, OBS-47: the consumer opens the log context from the message body,
+  // so every line of the handling carries the id; a missing or invalid id is
+  // replaced and never costs the message its normal ack.
+  describe('correlation context', () => {
+    const UUID =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+    const envelope = (data: Record<string, unknown>): Buffer =>
+      Buffer.from(JSON.stringify({ pattern: 'terminal.event', data }));
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it("handles the event under the message's correlationId and acks it", async () => {
+      const event = { ...validCompletedEvent(), correlationId: 'n-9' };
+      message.content = envelope(event);
+      let seen: string | undefined;
+      recordDeliveryMock.mockImplementation(() => {
+        seen = correlationContext.getCorrelationId();
+        return Promise.resolve({});
+      });
+
+      await consumer.handleTerminalEvent(event, context);
+
+      expect(seen).toBe('n-9');
+      expect(channel.ack).toHaveBeenCalledWith(message);
+      expect(correlationContext.getCorrelationId()).toBeUndefined();
+    });
+
+    it('logs a failed handling under the same correlationId', async () => {
+      const event = { ...validCompletedEvent(), correlationId: 'n-9' };
+      message.content = envelope(event);
+      const seenByLog: Array<string | undefined> = [];
+      jest.spyOn(Logger.prototype, 'error').mockImplementation(() => {
+        seenByLog.push(correlationContext.getCorrelationId());
+      });
+      recordDeliveryMock.mockRejectedValue(
+        new InvalidTerminalEventError(
+          'A FAILED event must carry a failureReason',
+          'MISSING_FAILURE_REASON',
+        ),
+      );
+
+      await consumer.handleTerminalEvent(event, context);
+
+      expect(seenByLog).toEqual(['n-9']);
+      expect(channel.nack).toHaveBeenCalledWith(message, false, false);
+    });
+
+    it('handles an event without a correlationId under a generated id and acks it', async () => {
+      const event = validCompletedEvent();
+      message.content = envelope({ ...event });
+      let seen: string | undefined;
+      recordDeliveryMock.mockImplementation(() => {
+        seen = correlationContext.getCorrelationId();
+        return Promise.resolve({});
+      });
+
+      await consumer.handleTerminalEvent(event, context);
+
+      expect(seen).toMatch(UUID);
+      expect(channel.ack).toHaveBeenCalledWith(message);
+      expect(channel.nack).not.toHaveBeenCalled();
+    });
+
+    it('replaces a numeric correlationId with a generated id, never dead-lettering for it (L-010)', async () => {
+      const event = {
+        ...validCompletedEvent(),
+        correlationId: 42 as unknown as string,
+      };
+      message.content = envelope(event);
+      let seen: string | undefined;
+      recordDeliveryMock.mockImplementation(() => {
+        seen = correlationContext.getCorrelationId();
+        return Promise.resolve({});
+      });
+
+      await consumer.handleTerminalEvent(event, context);
+
+      expect(seen).toMatch(UUID);
+      expect(channel.ack).toHaveBeenCalledWith(message);
+      expect(channel.nack).not.toHaveBeenCalled();
     });
   });
 });

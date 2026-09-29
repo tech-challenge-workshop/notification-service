@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { notificationMetrics } from '../../observability/metrics';
 import { DeliveryRecord } from '../domain/delivery-record';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 import { DELIVERY_REPOSITORY } from '../domain/delivery-repository.token';
@@ -134,30 +135,40 @@ export class NotificationDeliveryService {
     // run (it would record a failure for an email that was actually
     // delivered, and a second failed write from there would leave the row
     // with no outcome at all, inviting a duplicate send on redelivery).
+    //
+    // The metric is recorded here, when the attempt settles: every dedup
+    // return in recordDelivery comes before this point, so a redelivery of
+    // an event whose attempt already completed never counts twice (OBS-52).
     let outcome: { emailSentAt: Date } | { emailError: string };
+    const startedAt = process.hrtime.bigint();
     try {
       await this.emailSender.send({ to: ownerEmail, ...template });
       outcome = { emailSentAt: new Date() };
     } catch (error) {
-      // Prefer the error's `code` over its `message` (EN-20: emailError must
-      // never carry the raw transport error, stack, or connection string).
-      // nodemailer/Node socket failures set a short, safe `code`
-      // (ECONNREFUSED/ENOTFOUND/ETIMEDOUT/ESOCKET/...); `message` on those
-      // same errors embeds the SMTP host:port and is rarely long enough for
-      // MAX_ERROR_MESSAGE_LENGTH truncation to remove it. An empty result
-      // must not collapse to '', which is falsy and would let the
-      // send-attempt gate miss it on redelivery.
-      const code = (error as { code?: string })?.code;
-      const message = code ?? (error instanceof Error ? error.message : '');
-      const safeMessage = (message || 'Unknown email send failure').slice(
-        0,
-        MAX_ERROR_MESSAGE_LENGTH,
-      );
+      // Record only the error's `code`, never its `message` (EN-20: emailError
+      // must never carry the raw transport error, stack, or connection
+      // string). nodemailer/Node socket failures set a short, safe `code`
+      // (ECONNREFUSED/ENOTFOUND/EENVELOPE/...); `message` on those same
+      // errors embeds the SMTP host:port or the recipient's address (AD-015:
+      // key-path redaction cannot see text inside a message), so a code-less
+      // error falls back to fixed text. That fallback also keeps the result
+      // non-empty: '' is falsy and would let the send-attempt gate miss it
+      // on redelivery.
+      const code = (error as { code?: unknown })?.code;
+      const safeMessage = (
+        typeof code === 'string' && code ? code : 'Unknown email send failure'
+      ).slice(0, MAX_ERROR_MESSAGE_LENGTH);
       this.logger.warn(
         `Email send failed for event ${record.eventId}: ${safeMessage}`,
       );
       outcome = { emailError: safeMessage };
     }
+    // Outside the try, so a counting fault can never turn a delivered email
+    // into a recorded failure.
+    notificationMetrics.recordEmailDelivery(
+      'emailSentAt' in outcome ? 'sent' : 'failed',
+      Number(process.hrtime.bigint() - startedAt) / 1_000_000_000,
+    );
 
     Object.assign(record, outcome);
     await this.deliveryRepository.updateEmailOutcome(record.eventId, outcome);

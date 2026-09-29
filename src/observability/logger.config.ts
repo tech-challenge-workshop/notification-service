@@ -1,7 +1,21 @@
 import type { Options as PinoHttpOptions } from 'pino-http';
 import { CorrelationContext } from './correlation-context';
 
-const ACCESS_LOG_EXCLUDED_PATHS = ['/health', '/health/live', '/metrics'];
+/** The probe endpoints kept out of the access log (OBS-55). */
+export const ACCESS_LOG_EXCLUDED_PATHS = [
+  '/health',
+  '/health/live',
+  '/metrics',
+];
+
+/**
+ * The path a probe addresses, as the router matches it: the query string and
+ * a trailing slash reach the same handler, so they must not reach the log.
+ */
+function probePath(url: string): string {
+  const path = url.split('?', 1)[0];
+  return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+}
 
 // SPEC_DEVIATION: design.md lists only `*.`-prefixed paths plus `*.envelope`.
 // The redactor's wildcards need a parent key, so a root-level `{ ownerEmail }`
@@ -56,7 +70,10 @@ export function buildRootLoggerConfig(
       autoLogging: {
         ignore: (req) => {
           const url = req.url;
-          return url !== undefined && ACCESS_LOG_EXCLUDED_PATHS.includes(url);
+          return (
+            url !== undefined &&
+            ACCESS_LOG_EXCLUDED_PATHS.includes(probePath(url))
+          );
         },
       },
     },

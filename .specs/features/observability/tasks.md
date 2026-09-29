@@ -294,9 +294,11 @@ T11
 
 **Done when**:
 
-- [ ] Unit: the ignore list matches the three endpoints exactly
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: 2 new unit tests pass (no silent deletions)
+- [x] Unit: the ignore list matches the three endpoints exactly
+- [x] Gate check passes: `npm test`
+- [x] Test count: 2 new unit tests pass (no silent deletions)
+
+> Note: pinning the list exposed a gap: `ignore` compared the raw `req.url`, so `/health?probe=1` or `/metrics/` (same Express handler) were still access-logged. `logger.config.ts` now matches on the path with the query and a trailing slash stripped; look-alikes (`/healthz`, `/health/ready`, `/metrics/extra`) stay logged. The commit keeps the planned `test(...)` header; the body states the fix.
 
 **Tests**: unit
 **Gate**: quick

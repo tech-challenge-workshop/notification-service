@@ -3,7 +3,10 @@ import { AddressInfo } from 'node:net';
 import { Writable } from 'node:stream';
 import pinoHttp from 'pino-http';
 import { CorrelationContext } from './correlation-context';
-import { buildRootLoggerConfig } from './logger.config';
+import {
+  ACCESS_LOG_EXCLUDED_PATHS,
+  buildRootLoggerConfig,
+} from './logger.config';
 
 function createCapturingLogger(context: CorrelationContext) {
   const raw: string[] = [];
@@ -177,6 +180,63 @@ describe('buildRootLoggerConfig', () => {
     expect(lines[0]['service']).toBe('notification-service');
     const req = lines[0]['req'] as { headers: Record<string, string> };
     expect(req.headers['x-probe-path']).toBe('/');
+  });
+
+  // OBS-55 pinned: exactly the three probe endpoints are exempt, however the
+  // probe spells the path, and nothing that merely resembles them.
+  it('exempts exactly health, liveness and metrics, and still logs look-alike paths', async () => {
+    expect(ACCESS_LOG_EXCLUDED_PATHS).toEqual([
+      '/health',
+      '/health/live',
+      '/metrics',
+    ]);
+    const logger = createCapturingLogger(context);
+    const lookAlikes = [
+      '/healthz',
+      '/health/ready',
+      '/metrics/extra',
+      '/api/metrics',
+      '/local/deliveries/req-1',
+    ];
+
+    const lines = await withServer(logger, async (server) => {
+      const { port } = server.address() as AddressInfo;
+      for (const path of lookAlikes) {
+        await fetch(`http://127.0.0.1:${port}${path}`, {
+          headers: { 'x-probe-path': path },
+        });
+      }
+    });
+
+    expect(
+      lines.map(
+        (line) =>
+          (line['req'] as { headers: Record<string, string> }).headers[
+            'x-probe-path'
+          ],
+      ),
+    ).toEqual(lookAlikes);
+  });
+
+  it('skips the access log for the probe endpoints with a query string or a trailing slash', async () => {
+    const logger = createCapturingLogger(context);
+
+    const lines = await withServer(logger, async (server) => {
+      const { port } = server.address() as AddressInfo;
+      for (const path of [
+        '/health?probe=1',
+        '/health/',
+        '/health/live?x=y',
+        '/health/live/',
+        '/metrics?name[]=fiapx_email_delivery_total',
+        '/metrics/',
+      ]) {
+        const response = await fetch(`http://127.0.0.1:${port}${path}`);
+        expect(response.status).toBe(200);
+      }
+    });
+
+    expect(lines).toEqual([]);
   });
 
   it('defaults to the info level when LOG_LEVEL is unset', () => {

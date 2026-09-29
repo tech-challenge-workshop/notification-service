@@ -1,16 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
-import { createMicroserviceOptions } from './messaging/rabbitmq.config';
+import { configureApp } from './configure-app';
 
 async function bootstrap() {
   // Buffer until the pino logger is resolved, so bootstrap lines are JSON
-  // too. useLogger replaces Nest's global logger, which the RMQ microservice
-  // connected below shares with the HTTP app.
+  // too.
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  configureApp(app);
   const logger = app.get(Logger);
-  app.useLogger(logger);
-  app.connectMicroservice(createMicroserviceOptions());
   app
     .startAllMicroservices()
     .catch((err: unknown) =>

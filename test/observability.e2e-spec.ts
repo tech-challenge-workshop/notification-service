@@ -2,11 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import amqp from 'amqplib';
-import { Logger } from 'nestjs-pino';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
+import { configureApp } from '../src/configure-app';
 import { createMicroserviceOptions } from '../src/messaging/rabbitmq.config';
 import type { DeliveryRepository } from '../src/notifications/domain/delivery.repository';
 import { DELIVERY_REPOSITORY } from '../src/notifications/domain/delivery-repository.token';
@@ -19,9 +19,9 @@ import { DATA_SOURCE } from '../src/notifications/infrastructure/persistence/dat
 import { notificationMetrics } from '../src/observability/metrics';
 
 // S8 observability slice (OBS-46..55) on a real RabbitMQ and PostgreSQL,
-// the service composed as main.ts composes it. Skipped when either is unset
-// on a developer machine; in CI an unset one fails instead, so the suite can
-// never go green by skipping.
+// the service composed by configureApp, as main.ts composes it. Skipped when
+// either is unset on a developer machine; in CI an unset one fails instead,
+// so the suite can never go green by skipping.
 const url = process.env.RABBITMQ_TEST_URL;
 const hasDatabase = Boolean(process.env.DATABASE_HOST);
 
@@ -130,13 +130,17 @@ class RoutingEmailSender {
         .useValue(sender)
         .compile();
       app = moduleRef.createNestApplication({ bufferLogs: true });
-      app.useLogger(app.get(Logger));
+      const microservice = createMicroserviceOptions();
+      configureApp(
+        app,
+        options.consume === false
+          ? null
+          : {
+              ...microservice,
+              options: { ...microservice.options, urls: [url as string] },
+            },
+      );
       if (options.consume !== false) {
-        const microservice = createMicroserviceOptions();
-        app.connectMicroservice({
-          ...microservice,
-          options: { ...microservice.options, urls: [url as string] },
-        });
         await app.startAllMicroservices();
       }
       await app.init();

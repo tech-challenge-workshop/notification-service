@@ -105,10 +105,10 @@ T11
 
 **Done when**:
 
-- [ ] Log lines single JSON with `service: 'notification-service'` and the ALS correlation id
-- [ ] A recipient address under any `ownerEmail`/`email` key in a logged object is redacted
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: 7 new unit tests pass (no silent deletions)
+- [x] Log lines single JSON with `service: 'notification-service'` and the ALS correlation id
+- [x] A recipient address under any `ownerEmail`/`email` key in a logged object is redacted
+- [x] Gate check passes: `npm test`
+- [x] Test count: 7 new unit tests pass (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

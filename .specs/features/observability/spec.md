@@ -103,22 +103,22 @@ The Notification service is the end of the correlation chain and the source of t
 
 ## Requirement Traceability
 
-| Requirement ID | Story | Phase | Status |
+| Requirement ID | Story | Tasks | Status |
 | --- | --- | --- | --- |
-| OBS-46 | P1: correlationId (consume context) | Design | Pending |
-| OBS-47 | P1: correlationId (fallback) | Design | Pending |
-| OBS-48 | P1: structured logs (JSON shape) | Design | Pending |
-| OBS-49 | P1: structured logs (email redaction) | Design | Pending |
-| OBS-50 | P2: Metrics (exposition set) | Design | Pending |
-| OBS-51 | P2: Metrics (exactly-once outcome) | Design | Pending |
-| OBS-52 | P2: Metrics (redelivery no double-count) | Design | Pending |
-| OBS-53 | P2: Metrics (failure path) | Design | Pending |
-| OBS-54 | P2: Health (not-ready on dependency loss) | Design | Pending |
-| OBS-55 | P2: Health/Metrics (no auth, no noise) | Design | Pending |
+| OBS-46 | P1: correlationId (consume context) | T1, T4, T5, T6, T11 | In progress |
+| OBS-47 | P1: correlationId (fallback) | T1, T5, T6, T11 | In progress |
+| OBS-48 | P1: structured logs (JSON shape) | T2, T3, T11 | Pending |
+| OBS-49 | P1: structured logs (email redaction) | T2, T11 | Pending |
+| OBS-50 | P2: Metrics (exposition set) | T7, T8, T11 | Pending |
+| OBS-51 | P2: Metrics (exactly-once outcome) | T7, T11 | Pending |
+| OBS-52 | P2: Metrics (redelivery no double-count) | T7, T11 | Pending |
+| OBS-53 | P2: Metrics (failure path) | T7, T11 | Pending |
+| OBS-54 | P2: Health (not-ready on dependency loss) | T9, T11 | Pending |
+| OBS-55 | P2: Health/Metrics (no auth, no noise) | T8, T9, T10, T11 | Pending |
 
 **ID format:** `OBS-[NUMBER]` — `fiap-x-api` owns OBS-01..15; `processing-catalog` OBS-16..30; `processing-worker` OBS-31..45; this repo owns OBS-46..60; `fiap-x-platform` OBS-61..75.
 
-**Coverage:** 10 total, 0 mapped to tasks, 10 unmapped (mapping happens in Tasks).
+**Coverage:** 10 total, 10 mapped to tasks, 0 unmapped.
 
 ---
 

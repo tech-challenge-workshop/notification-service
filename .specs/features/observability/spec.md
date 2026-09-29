@@ -107,8 +107,8 @@ The Notification service is the end of the correlation chain and the source of t
 | --- | --- | --- | --- |
 | OBS-46 | P1: correlationId (consume context) | T1, T4, T5, T6, T11 | Implemented (pending Verifier) |
 | OBS-47 | P1: correlationId (fallback) | T1, T5, T6, T11 | Implemented (pending Verifier) |
-| OBS-48 | P1: structured logs (JSON shape) | T2, T3, T11 | Implemented (pending Verifier) |
-| OBS-49 | P1: structured logs (email redaction) | T2, T11 | Implemented (pending Verifier) |
+| OBS-48 | P1: structured logs (JSON shape) | T2, T3, T11, F1 | Implemented; logger wiring proven through `configureApp` (F1, M11 killed) - pending Verifier round 2 |
+| OBS-49 | P1: structured logs (email redaction) | T2, T11, F2 | Implemented; code-less send errors no longer carry the address (F2) - pending Verifier round 2 |
 | OBS-50 | P2: Metrics (exposition set) | T7, T8, T11 | Implemented (pending Verifier) |
 | OBS-51 | P2: Metrics (exactly-once outcome) | T7, T11 | Implemented (pending Verifier) |
 | OBS-52 | P2: Metrics (redelivery no double-count) | T7, T11 | Implemented (pending Verifier) |

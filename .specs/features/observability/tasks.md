@@ -24,7 +24,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 | Observability infra (context, logger, metrics) | unit | All branches; L-010 strict parse; redaction of email fields | `src/observability/*.spec.ts` | `npm test` |
 | Consumer / delivery service touched | unit | 1:1 to touched ACs; happy + edge + error | colocated `*.spec.ts` | `npm test` |
 | Broker-level behavior (dedup no double-count, failure outcome, correlation chain) | e2e | Real broker + Mailpit: exactly-once metric; failed send counted once; generated id on missing field | `test/*.e2e-spec.ts` | `npm run test:e2e` |
-| Config / module wiring / main.ts | none | - (build gate only) | - | build gate only |
+| Config / module wiring / main.ts | e2e via `configureApp` (F1) | main.ts's composition runs in the observability e2e; `main.ts` itself (create, listen) build gate only | `test/observability.e2e-spec.ts` | `npm run test:e2e` |
 
 ## Gate Check Commands
 
@@ -337,6 +337,39 @@ T11
 **Gate**: full
 
 **Commit**: `test(notification): prove the observability slice end to end`
+
+---
+
+## Post-verification fixes
+
+Validation round 1 (`validation.md`, FAIL) found OBS-48's logger wiring undiscriminated (M11 survived: the e2e re-did `app.useLogger` itself) and a latent OBS-49 leak: a send error without a `code` fell back to its raw `message`, which can name the recipient, into the log line and `email_error`.
+
+### F1: Prove the service's own logger wiring (OBS-48)
+
+**What**: `configureApp(app, consumer?)` holds main.ts's composition (`useLogger(app.get(Logger))`, then the RMQ terminal-event consumer; `null` skips the consumer). `main.ts` and the observability e2e's `startService` both call it, so the suite no longer re-does `useLogger`. Production behavior is unchanged. Also dropped the unused `CorrelationContext` DI provider/export (both call sites use the module-level instance).
+**Where**: `src/configure-app.ts`, `src/main.ts`, `test/observability.e2e-spec.ts`, `src/observability/observability.module.ts`
+**Requirement**: OBS-48
+
+**Done when**:
+
+- [x] M11 (`useLogger` removed from `configureApp`) killed in a scratch worktree: e2e 4 failed (`carries the event correlationId n-9 on every log line…`, generated-id, numeric-id, never-logs-the-recipient)
+- [x] M10 (`new CorrelationContext()` in the logger factory) still killed: e2e 3 failed
+- [x] Gate passes
+
+**Commits**: `refactor(notification): share app composition with the e2e`, `refactor(notification): drop the unused CorrelationContext provider`
+
+### F2: Keep recipient addresses out of send failure reasons (OBS-49)
+
+**What**: `attemptEmail` records only the error's string `code`; a code-less error falls back to the fixed `'Unknown email send failure'`, never `error.message`. New unit test: the sender rejects with ``new Error(`mailbox ${to} unavailable`)`` (no code); neither a `Logger.prototype.warn` argument nor `record.emailError` contains the address.
+**Where**: `src/notifications/application/notification-delivery.service.ts` (+ spec)
+**Requirement**: OBS-49
+
+**Done when**:
+
+- [x] Raw-message fallback restored → killed by the new unit test (scratch worktree)
+- [x] Gate passes: unit 151 -> 152, e2e 26 -> 26, 0 skipped
+
+**Commit**: `fix(notification): keep recipient addresses out of send failure reasons`
 
 ---
 

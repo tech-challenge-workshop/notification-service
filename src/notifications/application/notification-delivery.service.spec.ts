@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { DeliveryRecord } from '../domain/delivery-record';
 import { DeliveryRepository } from '../domain/delivery.repository';
 import { DeliveryPersistenceError } from '../domain/errors/delivery-persistence.error';
@@ -296,6 +297,26 @@ describe('NotificationDeliveryService', () => {
       await service.recordDelivery(validCompletedEvent());
 
       expect(emailSender.sent).toHaveLength(0); // already-failed attempt is not retried
+    });
+
+    it('keeps the recipient address out of the log and the record when the send rejects with a code-less error naming it', async () => {
+      // AD-015/OBS-49: a sender error without a `code` whose message embeds
+      // the address. Key-path redaction cannot see text inside a message.
+      const address = validCompletedEvent().ownerEmail;
+      emailSender.send = ({ to }) =>
+        Promise.reject(new Error(`mailbox ${to} unavailable`));
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      try {
+        const record = await service.recordDelivery(validCompletedEvent());
+
+        expect(warn).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(warn.mock.calls)).not.toContain(address);
+        expect(record.emailError).toBe('Unknown email send failure');
+        expect(record.emailError).not.toContain(address);
+      } finally {
+        warn.mockRestore();
+      }
     });
 
     it('falls back to a safe message when the send rejects with an empty error message, and still does not retry', async () => {

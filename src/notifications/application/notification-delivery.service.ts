@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { notificationMetrics } from '../../observability/metrics';
 import { DeliveryRecord } from '../domain/delivery-record';
 import type { DeliveryRepository } from '../domain/delivery.repository';
 import { DELIVERY_REPOSITORY } from '../domain/delivery-repository.token';
@@ -134,7 +135,12 @@ export class NotificationDeliveryService {
     // run (it would record a failure for an email that was actually
     // delivered, and a second failed write from there would leave the row
     // with no outcome at all, inviting a duplicate send on redelivery).
+    //
+    // The metric is recorded here, when the attempt settles: every dedup
+    // return in recordDelivery comes before this point, so a redelivery of
+    // an event whose attempt already completed never counts twice (OBS-52).
     let outcome: { emailSentAt: Date } | { emailError: string };
+    const startedAt = process.hrtime.bigint();
     try {
       await this.emailSender.send({ to: ownerEmail, ...template });
       outcome = { emailSentAt: new Date() };
@@ -158,6 +164,12 @@ export class NotificationDeliveryService {
       );
       outcome = { emailError: safeMessage };
     }
+    // Outside the try, so a counting fault can never turn a delivered email
+    // into a recorded failure.
+    notificationMetrics.recordEmailDelivery(
+      'emailSentAt' in outcome ? 'sent' : 'failed',
+      Number(process.hrtime.bigint() - startedAt) / 1_000_000_000,
+    );
 
     Object.assign(record, outcome);
     await this.deliveryRepository.updateEmailOutcome(record.eventId, outcome);

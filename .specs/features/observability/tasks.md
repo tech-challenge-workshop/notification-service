@@ -221,9 +221,11 @@ T11
 
 **Done when**:
 
-- [ ] Unit: successful send increments `sent` once + observes duration; throwing send increments `failed` once + observes duration; dedup-hit path increments nothing
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: 6 new unit tests pass (no silent deletions)
+- [x] Unit: successful send increments `sent` once + observes duration; throwing send increments `failed` once + observes duration; dedup-hit path increments nothing
+- [x] Gate check passes: `npm test`
+- [x] Test count: 6 new unit tests pass (no silent deletions)
+
+> Note: `NotificationMetrics` lives in `src/observability/metrics.ts` (dedicated `Registry`, `resetMetrics()`); both `outcome` series are initialised at 0 so the family is on every scrape. `prom-client@^15.1.3` added (same as the catalog). No `fiapx_http_*` family is registered in this service (OBS-50 names only the email families), so the catalog's HTTP metrics middleware is deliberately not ported: there is no registered-but-never-recorded family.
 
 **Tests**: unit
 **Gate**: quick

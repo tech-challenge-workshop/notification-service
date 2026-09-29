@@ -198,9 +198,9 @@ T11
 
 **Done when**:
 
-- [ ] Unit: event with `n-9` yields log-context `n-9` through the handling path; missing field yields a generated id and a normal ack
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: 4 new unit tests pass (no silent deletions)
+- [x] Unit: event with `n-9` yields log-context `n-9` through the handling path; missing field yields a generated id and a normal ack
+- [x] Gate check passes: `npm test`
+- [x] Test count: 4 new unit tests pass (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

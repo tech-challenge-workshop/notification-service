@@ -7,4 +7,6 @@ export class TerminalEventDto {
   zipStorageKey?: string;
   failureReason?: string;
   occurredAt: string;
+  /** The id the upstream chain assigned; absent from older publishers. */
+  correlationId?: string;
 }

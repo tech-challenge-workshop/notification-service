@@ -151,9 +151,9 @@ T11
 
 **Done when**:
 
-- [ ] DTO carries the optional field (type-level, consumed by T6)
-- [ ] Gate check passes: `npm run typecheck && npm test`
-- [ ] Test count: 1 new unit test passes (no silent deletions)
+- [x] DTO carries the optional field (type-level, consumed by T6)
+- [x] Gate check passes: `npm run typecheck && npm test`
+- [x] Test count: 1 new unit test passes (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

@@ -174,10 +174,10 @@ T11
 
 **Done when**:
 
-- [ ] Unit: valid id flows into the handler context; absent/number/object inputs get a generated id and the handler still runs
-- [ ] Unit: a `data: null` message keeps its existing (separate) malformed-event path — no behavior change from the wrapper
-- [ ] Gate check passes: `npm test`
-- [ ] Test count: 7 new unit tests pass (no silent deletions)
+- [x] Unit: valid id flows into the handler context; absent/number/object inputs get a generated id and the handler still runs
+- [x] Unit: a `data: null` message keeps its existing (separate) malformed-event path — no behavior change from the wrapper
+- [x] Gate check passes: `npm test`
+- [x] Test count: 14 new unit tests pass (7 planned cases; the L-010 invalid inputs and the malformed bodies are parametrised) (no silent deletions)
 
 **Tests**: unit
 **Gate**: quick

@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 3,
+  "next_id": 9,
   "lessons": [
     {
       "id": "L-001",
@@ -40,6 +40,114 @@
       ],
       "created": "2026-09-27T01:07:35Z",
       "last_seen": "2026-09-27T01:07:35Z"
+    },
+    {
+      "id": "L-003",
+      "key": "surviving_mutant::prove log line content through the app s real logger wiring shared context store and bootstrap logger not only on a logger the test builds itself",
+      "text": "Prove log-line content through the app's real logger wiring (shared context store and bootstrap logger), not only on a logger the test builds itself",
+      "signal": "surviving_mutant",
+      "scope": "logging",
+      "status": "candidate",
+      "features": [
+        "observability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M11 src/main.ts:12 (M10 observability.module.ts:13 killed) (logging)"
+      ],
+      "created": "2026-09-29T02:29:19Z",
+      "last_seen": "2026-09-29T02:29:19Z"
+    },
+    {
+      "id": "L-004",
+      "key": "ac_gap::key path log redaction does not cover values interpolated into message strings keep secrets out of error messages and assert on a real log call site",
+      "text": "Key-path log redaction does not cover values interpolated into message strings; keep secrets out of error messages and assert on a real log call site",
+      "signal": "ac_gap",
+      "scope": "logging",
+      "status": "candidate",
+      "features": [
+        "observability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "OBS-49; src/notifications/application/notification-delivery.service.ts:157 (probe B) (logging)"
+      ],
+      "created": "2026-09-29T02:29:19Z",
+      "last_seen": "2026-09-29T02:29:19Z"
+    },
+    {
+      "id": "L-005",
+      "key": "spec_precision_gap::when a spec names a log field also pin its format e g iso string vs epoch number and its value outside any correlation scope",
+      "text": "When a spec names a log field, also pin its format (e.g. ISO string vs epoch number) and its value outside any correlation scope",
+      "signal": "spec_precision_gap",
+      "scope": "logging",
+      "status": "candidate",
+      "features": [
+        "observability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "OBS-48 precision flag 1; src/observability/logger.config.ts:62 (logging)"
+      ],
+      "created": "2026-09-29T02:29:19Z",
+      "last_seen": "2026-09-29T02:29:19Z"
+    },
+    {
+      "id": "L-006",
+      "key": "spec_precision_gap::name metric label values by the measured event send outcome rather than by the input s domain status so independent tests cannot conflate the two",
+      "text": "Name metric label values by the measured event (send outcome) rather than by the input's domain status, so independent tests cannot conflate the two",
+      "signal": "spec_precision_gap",
+      "scope": "metrics",
+      "status": "candidate",
+      "features": [
+        "observability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "P2 independent test precision flag 2; test/observability.e2e-spec.ts:251 (metrics)"
+      ],
+      "created": "2026-09-29T02:29:19Z",
+      "last_seen": "2026-09-29T02:29:19Z"
+    },
+    {
+      "id": "L-007",
+      "key": "surviving_mutant::keep the entrypoint a single call into a tested composition function and prove that call with a process level smoke or a mocked factory spec",
+      "text": "Keep the entrypoint a single call into a tested composition function, and prove that call with a process-level smoke or a mocked-factory spec",
+      "signal": "surviving_mutant",
+      "scope": "bootstrap",
+      "status": "candidate",
+      "features": [
+        "observability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M14 src/main.ts:10 (bootstrap)"
+      ],
+      "created": "2026-09-29T02:52:18Z",
+      "last_seen": "2026-09-29T02:52:18Z"
+    },
+    {
+      "id": "L-008",
+      "key": "surviving_mutant::when a guard narrows an untrusted error property by type add a test case with the rejected type so the guard cannot be loosened unnoticed",
+      "text": "When a guard narrows an untrusted error property by type, add a test case with the rejected type so the guard cannot be loosened unnoticed",
+      "signal": "surviving_mutant",
+      "scope": "logging",
+      "status": "candidate",
+      "features": [
+        "observability"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M20 src/notifications/application/notification-delivery.service.ts:159 (logging)"
+      ],
+      "created": "2026-09-29T02:52:18Z",
+      "last_seen": "2026-09-29T02:52:18Z"
     }
   ]
 }

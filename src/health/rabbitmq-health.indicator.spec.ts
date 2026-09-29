@@ -15,10 +15,17 @@ const mockedAmqp = amqpConnectionManager as unknown as {
 
 describe('RabbitMqHealthIndicator', () => {
   let indicator: RabbitMqHealthIndicator;
-  let mockConnection: EventEmitter & { close: jest.Mock };
+  type MockConnection = EventEmitter & {
+    close: jest.Mock;
+    isConnected: jest.Mock;
+  };
+  let mockConnection: MockConnection;
 
-  function createMockConnection(): EventEmitter & { close: jest.Mock } {
-    return Object.assign(new EventEmitter(), { close: jest.fn() });
+  function createMockConnection(): MockConnection {
+    return Object.assign(new EventEmitter(), {
+      close: jest.fn(),
+      isConnected: jest.fn(() => false),
+    });
   }
 
   beforeEach(async () => {
@@ -52,6 +59,27 @@ describe('RabbitMqHealthIndicator', () => {
     mockConnection.emit('disconnect', { err: new Error('connection lost') });
 
     expect(indicator.isReady()).toBe(false);
+  });
+
+  // The connection opens in the constructor, but the listeners attach in
+  // onModuleInit; the database factory's migrations run in between. A broker
+  // that connected in that gap must not leave readiness at 503 forever.
+  it('reports ready when RabbitMQ connected before the listeners attached', async () => {
+    const early = createMockConnection();
+    early.isConnected.mockReturnValue(true);
+    mockedAmqp.connect.mockReturnValue(early);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [RabbitMqHealthIndicator],
+    }).compile();
+    const lateInit = module.get<RabbitMqHealthIndicator>(
+      RabbitMqHealthIndicator,
+    );
+
+    lateInit.onModuleInit();
+
+    expect(lateInit.isReady()).toBe(true);
+    early.emit('disconnect', { err: new Error('connection lost') });
+    expect(lateInit.isReady()).toBe(false);
   });
 
   it('should close the connection when the module is destroyed', () => {

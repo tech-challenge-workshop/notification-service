@@ -273,6 +273,8 @@ T11
 - [x] Gate check passes: `npm test && npm run test:e2e`
 - [x] Test count: 5 unit tests pass (no silent deletions): the 3 pre-S8 cases that asserted the always-200 `{status:'ok', ready}` body are rewritten to the OBS-54 contract (same scenarios, now HTTP 200/503 over supertest), plus 2 new (both down; liveness)
 
+> Follow-up (found by the T11 broker e2e, own commit `fix(notification): ...`): `RabbitMqHealthIndicator` opens its connection in the constructor but attaches the `connect` listener in `onModuleInit`; the DATA_SOURCE factory's `initialize()` + migrations run in between and outlast the broker handshake, so the event was lost and readiness stayed false for the life of the process. Invisible under the old always-200 body; with the honest 503 it would pin the service not-ready. `onModuleInit` now seeds `ready` from `connection.isConnected()` (+1 unit test).
+
 > Note: the readiness body mirrors the catalog's (`{status, rabbitmq: 'up'|'down', database: 'up'|'down'}`); the old `ready` flag is dropped. Nothing in the repo or `fiap-x-platform/compose.yaml` reads it.
 
 **Tests**: unit
